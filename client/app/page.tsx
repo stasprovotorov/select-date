@@ -1,5 +1,12 @@
-import Calendar from "@/components/calendar"
+import Calendar from "@/components/calendar";
+import AuthButton from "./auth_button";
 
 export default function Home() {
-  return <Calendar />
+  return (
+    <main>
+      <h1>Добро пожаловать!</h1>
+      <AuthButton />
+      <Calendar />
+    </main>
+  );
 }
