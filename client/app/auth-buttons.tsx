@@ -44,7 +44,8 @@ export function SignInButton() {
 
 export function SignOutButton() {
   const handleSignOut = async () => {
-    window.location.reload();
+    window.location.href =
+      "https://dev-w7nvr7hsnl0b0roi.us.auth0.com/v2/logout?client_id=yv70TLdTIRkawZcA8IwPQcSACEQIBtLd&returnTo=http://localhost:3000";
   };
 
   return (
