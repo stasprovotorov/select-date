@@ -1,7 +1,5 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
-
 export function SignInButton() {
   return (
     <div className="auth-btn-wrapper">
@@ -46,7 +44,6 @@ export function SignInButton() {
 
 export function SignOutButton() {
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
     window.location.reload();
   };
 
