@@ -1,11 +1,12 @@
 import Calendar from "@/components/calendar";
+import AuthGate from "@/components/AuthGate";
 
 export default function Home() {
   return (
-    <main>
-      <a href="/auth/login">Login</a>
-      <a href="/auth/logout">Logout</a>
-      <Calendar />
-    </main>
+    <AuthGate>
+      <main>
+        <Calendar />
+      </main>
+    </AuthGate>
   );
 }
