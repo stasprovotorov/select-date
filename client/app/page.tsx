@@ -1,11 +1,9 @@
 import Calendar from "@/components/calendar";
-import { SignInButton, SignOutButton} from "./auth-buttons";
 
 export default function Home() {
   return (
     <main>
-      <SignInButton />
-      <SignOutButton />
+      <a href="/auth/login">Login</a>
       <Calendar />
     </main>
   );
