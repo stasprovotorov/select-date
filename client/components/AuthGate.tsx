@@ -14,7 +14,13 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }, [isLoading, user]);
 
   // Пока идёт загрузка — показываем "Загрузка..."
-  if (isLoading) return <div>Загрузка...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Loading...
+      </div>
+    );
+  }
 
   // Если пользователь авторизован — рендерим приложение
   return <>{children}</>;
