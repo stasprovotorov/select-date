@@ -8,12 +8,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      // Редирект на страницу логина
+      // Redirect to the login page
       window.location.href = "/auth/login";
     }
   }, [isLoading, user]);
 
-  // Пока идёт загрузка — показываем "Загрузка..."
+  // While loading, show "Loading..."
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -22,6 +22,6 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Если пользователь авторизован — рендерим приложение
+  // If the user is authorized, we render the application
   return <>{children}</>;
 }
