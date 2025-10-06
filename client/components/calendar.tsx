@@ -69,6 +69,14 @@ export default function Calendar() {
     }
   }
 
+  const sendCalendarChange = async (dates: SelectedDate[]) => {
+    await fetch("/api/calendar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dates),
+    });
+  };
+
   const toggleDate = (month: number, day: number) => {
     const existingDateIndex = selectedDates.findIndex(
       (date) => date.year === currentYear && date.month === month && date.day === day,
@@ -92,6 +100,7 @@ export default function Calendar() {
 
     setSelectedDates(newDates)
     saveDatesToStorage(newDates)
+    sendCalendarChange(newDates)
   }
 
   const getDaysInMonth = (month: number, year: number) => {
