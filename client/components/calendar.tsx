@@ -38,6 +38,7 @@ interface SelectedDate {
   day: number
   color?: string // Added optional color property
   textColor?: string // Added text color for contrast
+  action?: "add" | "remove"
 }
 
 export default function Calendar() {
@@ -69,11 +70,11 @@ export default function Calendar() {
     }
   }
 
-  const sendCalendarChange = async (dates: SelectedDate[]) => {
+  const sendCalendarChange = async (date: SelectedDate) => {
     await fetch("/api/calendar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dates),
+      body: JSON.stringify(date),
     });
   };
 
@@ -100,7 +101,12 @@ export default function Calendar() {
 
     setSelectedDates(newDates)
     saveDatesToStorage(newDates)
-    sendCalendarChange(newDates)
+
+    if (existingDateIndex >= 0) {
+      sendCalendarChange({ ...newDate, action: "remove" });
+    } else {
+      sendCalendarChange({ ...newDate, action: "add" });
+    }
   }
 
   const getDaysInMonth = (month: number, year: number) => {
