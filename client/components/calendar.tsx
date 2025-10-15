@@ -38,7 +38,6 @@ interface SelectedDate {
   day: number
   color?: string // Added optional color property
   textColor?: string // Added text color for contrast
-  action?: "add" | "remove"
 }
 
 export default function Calendar() {
@@ -70,11 +69,11 @@ export default function Calendar() {
     }
   }
 
-  const sendCalendarChange = async (date: SelectedDate) => {
-    await fetch("/api/calendar", {
+  const sendCalendarChange = async (date: SelectedDate, action: "add" | "remove") => {
+    return await fetch("/api/calendar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(date),
+      body: JSON.stringify({ date, action }),
     });
   };
 
@@ -90,24 +89,36 @@ export default function Calendar() {
       color: selectedColor.value, // Store selected color with date
       textColor: selectedColor.textColor, // Store text color for contrast
     }
+    const prevDates = [...selectedDates]; // Save current dates state for rollback
 
     let newDates: SelectedDate[]
+    let action: "add" | "remove";
 
     if (existingDateIndex >= 0) {
       newDates = selectedDates.filter((_, index) => index !== existingDateIndex)
+      action = "remove";
     } else {
       newDates = [...selectedDates, newDate]
+      action = "add";
     }
 
     setSelectedDates(newDates)
     saveDatesToStorage(newDates)
 
-    if (existingDateIndex >= 0) {
-      sendCalendarChange({ ...newDate, action: "remove" });
-    } else {
-      sendCalendarChange({ ...newDate, action: "add" });
-    }
-  }
+    sendCalendarChange(newDate, action)
+      .then(res => {
+        if (!res.ok) {
+          setSelectedDates(prevDates);         // rollback
+          saveDatesToStorage(prevDates);       // rollback localStorage
+          alert("Server synchronization error!");
+        }
+      })
+      .catch(() => {
+        setSelectedDates(prevDates);           // rollback
+        saveDatesToStorage(prevDates);         // rollback localStorage
+        alert("Network error!");
+      });
+    };
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate()
