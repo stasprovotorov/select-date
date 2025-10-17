@@ -70,14 +70,14 @@ export default function Calendar() {
   }
 
   const sendCalendarChange = async (date: SelectedDate, action: "add" | "remove") => {
-    return await fetch("/api/calendar", {
+    return await fetch("/api/calendar/error", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date, action }),
     });
   };
 
-  const toggleDate = (month: number, day: number) => {
+  const toggleDate = async (month: number, day: number) => {
     const existingDateIndex = selectedDates.findIndex(
       (date) => date.year === currentYear && date.month === month && date.day === day,
     )
@@ -105,20 +105,19 @@ export default function Calendar() {
     setSelectedDates(newDates)
     saveDatesToStorage(newDates)
 
-    sendCalendarChange(newDate, action)
-      .then(res => {
-        if (!res.ok) {
-          setSelectedDates(prevDates);         // rollback
-          saveDatesToStorage(prevDates);       // rollback localStorage
-          alert("Server synchronization error!");
-        }
-      })
-      .catch(() => {
-        setSelectedDates(prevDates);           // rollback
-        saveDatesToStorage(prevDates);         // rollback localStorage
-        alert("Network error!");
-      });
-    };
+    try {
+      const res = await sendCalendarChange(newDate, action);
+      if (!res.ok) {
+        setSelectedDates(prevDates); // rollback
+        saveDatesToStorage(prevDates);
+        alert("Server synchronization error!");
+      }
+    } catch (e) {
+      setSelectedDates(prevDates); // rollback
+      saveDatesToStorage(prevDates);
+      alert("Network error!");
+    }
+  };
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate()
