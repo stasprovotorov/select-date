@@ -108,14 +108,12 @@ export default function Calendar() {
     try {
       const res = await sendCalendarChange(newDate, action);
       if (!res.ok) {
-        setSelectedDates(prevDates); // rollback
-        saveDatesToStorage(prevDates);
-        alert("Server synchronization error!");
+          throw new Error("Server synchronization error!")
       }
     } catch (e) {
       setSelectedDates(prevDates); // rollback
       saveDatesToStorage(prevDates);
-      alert("Network error!");
+      alert(e);
     }
   };
 
