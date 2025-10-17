@@ -69,7 +69,15 @@ export default function Calendar() {
     }
   }
 
-  const toggleDate = (month: number, day: number) => {
+  const sendCalendarChange = async (date: SelectedDate, action: "add" | "remove") => {
+    return await fetch("/api/calendar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date, action }),
+    });
+  };
+
+  const toggleDate = async (month: number, day: number) => {
     const existingDateIndex = selectedDates.findIndex(
       (date) => date.year === currentYear && date.month === month && date.day === day,
     )
@@ -81,18 +89,33 @@ export default function Calendar() {
       color: selectedColor.value, // Store selected color with date
       textColor: selectedColor.textColor, // Store text color for contrast
     }
+    const prevDates = [...selectedDates]; // Save current dates state for rollback
 
     let newDates: SelectedDate[]
+    let action: "add" | "remove";
 
     if (existingDateIndex >= 0) {
       newDates = selectedDates.filter((_, index) => index !== existingDateIndex)
+      action = "remove";
     } else {
       newDates = [...selectedDates, newDate]
+      action = "add";
     }
 
     setSelectedDates(newDates)
     saveDatesToStorage(newDates)
-  }
+
+    try {
+      const res = await sendCalendarChange(newDate, action);
+      if (!res.ok) {
+          throw new Error("Server synchronization error!")
+      }
+    } catch (e) {
+      setSelectedDates(prevDates); // rollback
+      saveDatesToStorage(prevDates);
+      alert(e);
+    }
+  };
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate()
