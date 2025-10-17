@@ -70,7 +70,7 @@ export default function Calendar() {
   }
 
   const sendCalendarChange = async (date: SelectedDate, action: "add" | "remove") => {
-    return await fetch("/api/calendar/error", {
+    return await fetch("/api/calendar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date, action }),
