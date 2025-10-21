@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Annotated
 
 
 class SelectedDate(BaseModel):
@@ -19,5 +19,6 @@ class CalendarChange(BaseModel):
 app = FastAPI()
 
 @app.post('/calendar')
-async def calendar_change(data: CalendarChange):
-    print(data.model_dump())
+async def calendar_change(request: Request, data: CalendarChange):
+    print('Body data:', data.model_dump(), sep='\n')
+    print('Header data:', request.headers, sep='\n')
