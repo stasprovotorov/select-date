@@ -8,7 +8,8 @@ export async function POST(request: Request) {
   const backendRes = await fetch("http://127.0.0.1:8000/calendar", {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': accessToken
     },
     body: JSON.stringify(data),
   });
