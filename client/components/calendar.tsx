@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { stat } from "fs"
 
 const months = [
   "January",
@@ -40,6 +41,13 @@ interface SelectedDate {
   textColor?: string // Added text color for contrast
 }
 
+function toStrIsoDate(date: SelectedDate) {
+  const year = String(date.year).padStart(4, '0')
+  const month = String(date.month).padStart(2, '0')
+  const day = String(date.day).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function Calendar() {
   const [selectedDates, setSelectedDates] = useState<SelectedDate[]>([])
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
@@ -69,13 +77,38 @@ export default function Calendar() {
     }
   }
 
-  const sendCalendarChange = async (date: SelectedDate, action: "add" | "remove") => {
-    return await fetch("/api/calendar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, action }),
-    });
-  };
+  type sendCalendarChangeResult =
+    | { ok: true; status: number; data: any | null }
+    | { ok: false; status: number; error: string }
+
+  async function sendCalendarChange(date: SelectedDate, action: "add" | "remove"): Promise<sendCalendarChangeResult> {
+    const strIsoDate = encodeURIComponent(toStrIsoDate(date))
+    const url = `/api/calendar/${strIsoDate}`
+
+    let reqInit: RequestInit;
+    if (action === "add") {
+      reqInit = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(date)
+      }
+    } else {
+      reqInit = { method: "DELETE" }
+    };
+
+    try {
+      const res = await fetch(url, reqInit);
+      const status = res.status;
+      if (status === 204) {
+        return { ok: true, status, data: null};
+      } else {
+        const data = await res.json();
+        return res.ok ? {ok: true, status, data} : { ok: false, status, error: String(data)}
+      }
+    } catch (err: any) {
+      return { ok: false, status: 0, error: String(err?.message ?? err) }
+    }
+  }
 
   const toggleDate = async (month: number, day: number) => {
     const existingDateIndex = selectedDates.findIndex(
