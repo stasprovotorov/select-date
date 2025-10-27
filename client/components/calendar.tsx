@@ -77,38 +77,38 @@ export default function Calendar() {
     }
   }
 
-  type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+  type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
   type sendCalendarChangeResult =
     | { ok: true; status: number; data: Json | null }
-    | { ok: false; status: number; error: string };
+    | { ok: false; status: number; error: string }
 
   async function sendCalendarChange(date: SelectedDate, method: "POST" | "DELETE"): Promise<sendCalendarChangeResult> {
-    const strIsoDate = encodeURIComponent(toStrIsoDate(date));
-    const url = `/api/calendar/${strIsoDate}`;
+    const strIsoDate = encodeURIComponent(toStrIsoDate(date))
+    const url = `/api/calendar/${strIsoDate}`
 
-    let reqInit: RequestInit;
+    let reqInit: RequestInit
     if (method === "POST") {
       reqInit = {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(date)
-      };
+      }
     } else {
-      reqInit = { method };
-    };
+      reqInit = { method }
+    }
 
     try {
-      const res = await fetch(url, reqInit);
-      const status = res.status;
+      const res = await fetch(url, reqInit)
+      const status = res.status
       if (status === 204) {
-        return { ok: true, status, data: null};
+        return { ok: true, status, data: null}
       } else {
-        const data = await res.json();
-        return res.ok ? {ok: true, status, data} : { ok: false, status, error: String(data)};
-      };
+        const data = await res.json()
+        return res.ok ? {ok: true, status, data} : { ok: false, status, error: String(data)}
+      }
     } catch (err: any) {
-      return { ok: false, status: 0, error: String(err?.message ?? err) };
-    };
+      return { ok: false, status: 0, error: String(err?.message ?? err) }
+    }
   }
 
   const toggleDate = async (month: number, day: number) => {
@@ -130,26 +130,26 @@ export default function Calendar() {
 
     if (existingDateIndex >= 0) {
       newDates = selectedDates.filter((_, index) => index !== existingDateIndex)
-      calendarChangeReqMethod = "DELETE";
+      calendarChangeReqMethod = "DELETE"
     } else {
       newDates = [...selectedDates, newDate]
-      calendarChangeReqMethod = "POST";
+      calendarChangeReqMethod = "POST"
     }
 
     setSelectedDates(newDates)
     saveDatesToStorage(newDates)
 
     try {
-      const res = await sendCalendarChange(newDate, calendarChangeReqMethod);
+      const res = await sendCalendarChange(newDate, calendarChangeReqMethod)
       if (!res.ok) {
-        throw new Error("Server synchronization error!");
-      };
+        throw new Error("Server synchronization error!")
+      }
     } catch (err) {
-      setSelectedDates(prevDates); // rollback
-      saveDatesToStorage(prevDates);
-      alert(err);
-    };
-  };
+      setSelectedDates(prevDates) // rollback
+      saveDatesToStorage(prevDates)
+      alert(err)
+    }
+  }
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate()
