@@ -29,3 +29,4 @@
 # server
 /server/.venv
 /server/__pycache__
+/server/src/__pycache__
