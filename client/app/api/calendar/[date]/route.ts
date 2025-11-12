@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server'
 import { auth0 } from '../../../../lib/auth0'
 
 const BACKEND_URL = process.env.FASTAPI_URL || ''
@@ -5,71 +6,57 @@ if (!BACKEND_URL) {
   throw new Error('Missing required environment variable FASTAPI_URL in .env.local')
 }
 
-export async function POST(
-  request: Request, 
+async function handleRequest(
+  request: Request,
   { params }: { params: Promise<{ date: string }> }
+): Promise<Response> {
+  const [{ token: authToken }, { date: dateID }] = await Promise.all([
+    auth0.getAccessToken(),
+    params
+  ])
+
+  const backendURL = `${BACKEND_URL}/calendar/${encodeURIComponent(dateID)}`
+  
+  // Copy headers from client request
+  const headers = new Headers(request.headers)
+  
+  // Add/override Authorization header
+  headers.set('Authorization', `Bearer ${authToken}`)
+  
+  // Proxy request to backend
+  return fetch(backendURL, {
+    method: request.method,
+    headers,
+    body: request.body // Proxy body directly as stream, no parsing/serialization
+  })
+}
+
+function handleError(err: unknown, method: string): NextResponse {
+  console.error(`Error in ${method} /api/calendar/[date]:`, err)
+  return NextResponse.json(
+    { error: 'Bad gateway' },
+    { status: 502 }
+  )
+}
+
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ date: string }> }
 ) {
-  const { token: authToken } = await auth0.getAccessToken()
-  const { date: dateID } = await params
-  const fullBackendURL = `${BACKEND_URL}/calendar/${encodeURIComponent(dateID)}`
-  const dateData = await request.json()
-  const dateDataJsonText = JSON.stringify(dateData)
-
   try {
-    const backendRes = await fetch(fullBackendURL, 
-      {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: dateDataJsonText
-      }
-    )
-
-    return new Response(dateDataJsonText, { status: backendRes.status })
-
+    return await handleRequest(request, context)
   } catch (err) {
-    console.error(`Error in POST with route: ${fullBackendURL}\n`, err)
-
-    return new Response(
-      JSON.stringify({ error: 'Bad gateway' }),
-      { 
-        status: 502, 
-        headers: { 'Content-Type': 'application/json' }
-      }
-    )
+    return handleError(err, 'POST')
   }
 }
 
 export async function DELETE(
-  _request: Request, 
-  { params }: { params: Promise<{ date: string }> }
+  request: Request,
+  context: { params: Promise<{ date: string }> }
 ) {
-  const { token: authToken } = await auth0.getAccessToken()
-  const { date: dateID } = await params
-  const fullBackendURL = `${BACKEND_URL}/calendar/${encodeURIComponent(dateID)}`
-
   try {
-    const backendRes = await fetch(
-      fullBackendURL, 
-      { 
-        method: "DELETE",
-        headers: { 'Authorization': `Bearer ${authToken}` } 
-      }
-    )
-
-    return new Response(null, { status: backendRes.status })
-
+    return await handleRequest(request, context)
   } catch (err) {
-    console.error(`Error in DELETE with route: ${fullBackendURL}\n`, err)
-
-    return new Response(
-      JSON.stringify({ error: 'Bad gateway' }),
-      {
-        status: 502,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    )
+    return handleError(err, 'DELETE')
   }
 }
