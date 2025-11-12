@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { selectDate, deselectDate, type SelectedDate } from "@/lib/api-service"
 
 const months = [
   "January",
@@ -32,13 +33,6 @@ const colorOptions = [
   { name: "Teal", value: "bg-teal-500 hover:bg-teal-600", textColor: "text-white" },
 ]
 
-interface SelectedDate {
-  year: number
-  month: number
-  day: number
-  color?: string // Added optional color property
-  textColor?: string // Added text color for contrast
-}
 
 export default function Calendar() {
   const [selectedDates, setSelectedDates] = useState<SelectedDate[]>([])
@@ -69,14 +63,6 @@ export default function Calendar() {
     }
   }
 
-  const sendCalendarChange = async (date: SelectedDate, action: "add" | "remove") => {
-    return await fetch("/api/calendar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, action }),
-    });
-  };
-
   const toggleDate = async (month: number, day: number) => {
     const existingDateIndex = selectedDates.findIndex(
       (date) => date.year === currentYear && date.month === month && date.day === day,
@@ -86,36 +72,31 @@ export default function Calendar() {
       year: currentYear,
       month,
       day,
-      color: selectedColor.value, // Store selected color with date
-      textColor: selectedColor.textColor, // Store text color for contrast
+      color: selectedColor.value,
+      textColor: selectedColor.textColor,
     }
-    const prevDates = [...selectedDates]; // Save current dates state for rollback
+    const prevDates = [...selectedDates]
 
     let newDates: SelectedDate[]
-    let action: "add" | "remove";
+    let result
 
     if (existingDateIndex >= 0) {
       newDates = selectedDates.filter((_, index) => index !== existingDateIndex)
-      action = "remove";
+      result = await deselectDate(newDate)
     } else {
       newDates = [...selectedDates, newDate]
-      action = "add";
+      result = await selectDate(newDate)
     }
 
     setSelectedDates(newDates)
     saveDatesToStorage(newDates)
 
-    try {
-      const res = await sendCalendarChange(newDate, action);
-      if (!res.ok) {
-          throw new Error("Server synchronization error!")
-      }
-    } catch (e) {
-      setSelectedDates(prevDates); // rollback
-      saveDatesToStorage(prevDates);
-      alert(e);
+    if (!result.ok) {
+      setSelectedDates(prevDates) // rollback
+      saveDatesToStorage(prevDates)
+      alert(result.error)
     }
-  };
+  }
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate()

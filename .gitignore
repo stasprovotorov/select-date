@@ -25,3 +25,8 @@
 # typescript
 /client/*.tsbuildinfo
 /client/next-env.d.ts
+
+# server
+/server/.venv
+/server/__pycache__
+/server/src/__pycache__
