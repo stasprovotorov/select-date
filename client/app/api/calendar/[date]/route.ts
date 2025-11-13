@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth0 } from '../../../../lib/auth0'
+import { getJwt } from '../../../../lib/api-get-jwt'
 
 const BACKEND_URL = process.env.FASTAPI_URL || ''
 if (!BACKEND_URL) {
@@ -10,8 +10,8 @@ async function handleRequest(
   request: Request,
   { params }: { params: Promise<{ date: string }> }
 ): Promise<Response> {
-  const [{ token: authToken }, { date: dateID }] = await Promise.all([
-    auth0.getAccessToken(),
+  const [authToken, { date: dateID }] = await Promise.all([
+    await getJwt(),
     params
   ])
 
