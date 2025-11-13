@@ -1,4 +1,9 @@
-// Function to obtain an access token from the Auth0 API as a JWT.
+// Function to obtain an access token from the Auth0 API as a JWT
+
+const DOMAIN = process.env.AUTH0_DOMAIN || ''
+const CLIENT_ID = process.env.AUTH0_CLIENT_ID || ''
+const CLIENT_SECRET = process.env.AUTH0_CLIENT_SECRET || ''
+const AUDIENCE = process.env.AUTH0_AUDIENCE || ''
 
 type Auth0JwtResponse = {
   access_token: string
@@ -7,20 +12,15 @@ type Auth0JwtResponse = {
 }
 
 export async function getJwt(): Promise<string> {
-  const domain = process.env.AUTH0_DOMAIN || ''
-  const clientId = process.env.AUTH0_CLIENT_ID || ''
-  const clientSecret = process.env.AUTH0_CLIENT_SECRET || ''
-  const audience = process.env.AUTH0_AUDIENCE || ''
-
-  if (!domain || !clientId || !clientSecret || !audience) {
+  if (!DOMAIN || !CLIENT_ID || !CLIENT_SECRET || !AUDIENCE) {
     throw new Error('Missing Auth0 configuration')
   }
 
-  const url = `${domain}/oauth/token`
+  const url = `${DOMAIN}/oauth/token`
   const payload = {
-    client_id: clientId,
-    client_secret: clientSecret,
-    audience,
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
+    audience: AUDIENCE,
     grant_type: 'client_credentials'
   }
 
