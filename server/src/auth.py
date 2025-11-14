@@ -33,7 +33,6 @@ async def fetch_jwks(url: str) -> dict:
                 if resp.status != 200:
                     raise AuthError(401, f"Failed to obtain JWKS from Auth0: HTTP {resp.status}")
                 jwks = await resp.json(content_type=None)
-                print(type(jwks))
                 return jwks
     except json.JSONDecodeError as err:
         raise AuthError(401, "Invalid JWKS JSON") from err
