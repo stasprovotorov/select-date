@@ -7,20 +7,29 @@ if (!BACKEND_URL) {
 }
 
 async function handleRequest(request: Request): Promise<Response> {
-  const authToken = await getJwt()
   const backendURL = `${BACKEND_URL}/calendar`
   
   // Copy headers from client request
   const headers = new Headers(request.headers)
-  
-  // Add/override Authorization header
+
+  // Get token and set Authorization header
+  const authToken = await getJwt()
   headers.set('Authorization', `Bearer ${authToken}`)
+
+  // Get JSON body and new bodylength
+  const jsonBody = await new Response(request.body).json()
+  const strJsonBody = JSON.stringify(jsonBody)
+  const bodyLen = Buffer.byteLength(strJsonBody)
   
+  // Set Content-Type and new Content-Length headers 
+  headers.set('Content-Type', 'application/json')
+  headers.set('Content-Length', String(bodyLen))
+
   // Proxy request to backend
-  return fetch(backendURL, {
+  return await fetch(backendURL, {
     method: request.method,
     headers,
-    body: request.body // Proxy body directly as stream, no parsing/serialization
+    body: strJsonBody
   })
 }
 
