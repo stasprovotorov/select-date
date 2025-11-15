@@ -6,16 +6,9 @@ if (!BACKEND_URL) {
   throw new Error('Missing required environment variable FASTAPI_URL in .env.local')
 }
 
-async function handleRequest(
-  request: Request,
-  { params }: { params: Promise<{ date: string }> }
-): Promise<Response> {
-  const [authToken, { date: dateID }] = await Promise.all([
-    await getJwt(),
-    params
-  ])
-
-  const backendURL = `${BACKEND_URL}/calendar/${encodeURIComponent(dateID)}`
+async function handleRequest(request: Request): Promise<Response> {
+  const authToken = await getJwt()
+  const backendURL = `${BACKEND_URL}/calendar`
   
   // Copy headers from client request
   const headers = new Headers(request.headers)
@@ -32,19 +25,16 @@ async function handleRequest(
 }
 
 function handleError(err: unknown, method: string): NextResponse {
-  console.error(`Error in ${method} /api/calendar/[date]:`, err)
+  console.error(`Error in ${method} /api/calendar:`, err)
   return NextResponse.json(
     { error: 'Bad gateway' },
     { status: 502 }
   )
 }
 
-export async function POST(
-  request: Request,
-  context: { params: Promise<{ date: string }> }
-) {
+export async function POST(request: Request) {
   try {
-    return await handleRequest(request, context)
+    return await handleRequest(request)
   } catch (err) {
     return handleError(err, 'POST')
   }
@@ -55,7 +45,7 @@ export async function DELETE(
   context: { params: Promise<{ date: string }> }
 ) {
   try {
-    return await handleRequest(request, context)
+    return await handleRequest(request)
   } catch (err) {
     return handleError(err, 'DELETE')
   }
