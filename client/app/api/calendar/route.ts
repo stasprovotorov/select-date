@@ -40,10 +40,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(
-  request: Request,
-  context: { params: Promise<{ date: string }> }
-) {
+export async function DELETE(request: Request) {
   try {
     return await handleRequest(request)
   } catch (err) {
