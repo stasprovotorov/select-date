@@ -13,27 +13,13 @@ type ApiResult<T = unknown> =
   | { ok: true; data: T | null }
   | { ok: false; error: string }
 
-// Convert date to ISO string format (YYYY-MM-DD)
-function toStrIsoDate(date: SelectedDate): string {
-  const year = String(date.year).padStart(4, '0')
-  const month = String(date.month).padStart(2, '0')
-  const day = String(date.day).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 // Common function to make calendar API requests
 async function makeCalendarRequest(
-  date: SelectedDate,
   method: 'POST' | 'DELETE',
-  body?: string
+  body: string
 ): Promise<ApiResult> {
-  const strIsoDate = encodeURIComponent(toStrIsoDate(date))
-  const url = `/api/calendar/${strIsoDate}`
-
-  const headers: HeadersInit = {}
-  if (body) {
-    headers['Content-Type'] = 'application/json'
-  }
+  const url = '/api/calendar'
+  const headers: HeadersInit = { 'Content-Type': 'application/json' }
 
   try {
     const res = await fetch(url, {
@@ -56,11 +42,10 @@ async function makeCalendarRequest(
 
 // Select a date (POST)
 export async function selectDate(date: SelectedDate): Promise<ApiResult> {
-  return makeCalendarRequest(date, 'POST', JSON.stringify(date))
+  return makeCalendarRequest('POST', JSON.stringify(date))
 }
 
 // Deselect a date (DELETE)
 export async function deselectDate(date: SelectedDate): Promise<ApiResult> {
-  return makeCalendarRequest(date, 'DELETE')
+  return makeCalendarRequest('DELETE', JSON.stringify(date))
 }
-
