@@ -1,8 +1,11 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Date
-from sqlalchemy import insert, delete
 from datetime import date
+
+from fastapi import HTTPException
+from sqlalchemy import Date, String, delete, insert
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
 from schemas import SelectedDateSchema
 
 
@@ -19,36 +22,114 @@ class SelectedDateModel(Base):
     color_text: Mapped[str] = mapped_column(String, nullable=False)
 
 
-class DatabaseProvider:
-    def __init__(self):
-        self.database_url = "sqlite+aiosqlite:///database.db"
-        self.engine = create_async_engine(self.database_url)
-        self.sessions = async_sessionmaker(self.engine)
+class DatabaseError(HTTPException):
+    """
+    HTTPException subclass for database related errors.
+    """
+    def __init__(self, status_code: int = 500, detail: str = "Internal database error"):
+        super().__init__(status_code=status_code, detail=detail)
 
-    async def initialize_database(self):
-        async with self.engine.begin() as connection:
+
+class DatabaseProvider:
+    """
+    Provider class that offers utilities for interacting with the SQLite database:
+    initializing the schema, and performing data retrieval, insertion, and deletion.
+    """
+    DATABASE_URL: str = "sqlite+aiosqlite:///database.db"
+    _engine: AsyncEngine | None = None
+    _sessions: async_sessionmaker | None = None
+
+    @classmethod
+    def get_engine(cls) -> AsyncEngine:
+        """
+        Create an asynchronous SQLite database engine.
+        """
+        if cls._engine is None:
+            cls._engine = create_async_engine(cls.DATABASE_URL)
+        return cls._engine
+
+    @classmethod
+    def get_sessionmaker(cls) -> async_sessionmaker:
+        """
+        Create an asynchronous session factory for database sessions.
+        """
+        if cls._sessions is None:
+            engine = cls.get_engine()
+            cls._sessions = async_sessionmaker(engine)
+        return cls._sessions
+
+    @classmethod
+    async def initialize_database(cls):
+        """
+        Initialize database and create tables if they don't exist. Idempotent.
+        """
+        engine = cls.get_engine()
+        async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
 
-    async def add_selected_date(self, user_id: str, selected_date: SelectedDateSchema):
-        month = selected_date.month + 1
+    @classmethod
+    async def add_selected_date(cls, user_id: str, selected_date: SelectedDateSchema) -> dict:
+        """
+        Insert a selected date.
+        On unique constraint violation raise DatabaseError with 409 status code.
+        """
+        month = selected_date.month + 1 # Fuck yeah! \m_
         date_data = date(selected_date.year, month, selected_date.day)
-        async with self.sessions() as session:
-            statement = insert(SelectedDateModel).values(
-                user_id=user_id,
-                calendar_date=date_data,
-                color=selected_date.color,
-                color_text=selected_date.textColor
-            )
-            await session.execute(statement)
-            await session.commit()
+        AsyncSessions = cls.get_sessionmaker()
 
-    async def delete_selected_date(self, user_id: str, selected_date: SelectedDateSchema):
-        month = selected_date.month + 1
+        async with AsyncSessions() as session:
+            try:
+                stmt = insert(SelectedDateModel).values(
+                    user_id=user_id,
+                    calendar_date=date_data,
+                    color=selected_date.color,
+                    color_text=selected_date.textColor
+                ).returning(
+                    SelectedDateModel.user_id,
+                    SelectedDateModel.calendar_date,
+                    SelectedDateModel.color,
+                    SelectedDateModel.color_text
+                )
+
+                result = await session.execute(stmt)
+                row = result.mappings().first()
+                inserted_date = dict(row)
+
+                await session.commit()
+                return dict(inserted_date)
+            
+            except IntegrityError as e:
+                await session.rollback()
+                raise DatabaseError(409, "Record already exists for this user and date.") from e
+
+    @classmethod
+    async def delete_selected_date(cls, user_id: str, selected_date: SelectedDateSchema) -> dict:
+        """
+        Delete selected date by user_id and calendar_date.
+        If nothing was deleted, raise DatabaseError with 404 status code.
+        """
+        month = selected_date.month + 1 # This must be fixed on the client side
         date_data = date(selected_date.year, month, selected_date.day)
-        async with self.sessions() as session:
-            statement = delete(SelectedDateModel).where(
+        AsyncSessions = cls.get_sessionmaker()
+
+        async with AsyncSessions() as session:
+            stmt = delete(SelectedDateModel).where(
                 SelectedDateModel.user_id == user_id, 
                 SelectedDateModel.calendar_date == date_data
+            ).returning(
+                SelectedDateModel.user_id,
+                SelectedDateModel.calendar_date,
+                SelectedDateModel.color,
+                SelectedDateModel.color_text
             )
-            await session.execute(statement)
+
+            result = await session.execute(stmt)
+            row = result.mappings().first()
+
+            if not row:
+                await session.rollback()
+                raise DatabaseError(404, "Selected date not found for the user")
+            
+            deleted_date = dict(row)
             await session.commit()
+            return dict(deleted_date)
