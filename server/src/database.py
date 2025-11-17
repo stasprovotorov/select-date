@@ -1,7 +1,7 @@
 from datetime import date
 
 from fastapi import HTTPException
-from sqlalchemy import Date, String, delete, insert
+from sqlalchemy import Date, String, delete, insert, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -40,22 +40,22 @@ class DatabaseProvider:
     _sessions: async_sessionmaker | None = None
 
     @classmethod
-    def get_engine(cls) -> AsyncEngine:
+    def set_engine(cls) -> AsyncEngine:
         """
-        Create an asynchronous SQLite database engine.
+        Create the async SQLite engine if it is not set.
         """
         if cls._engine is None:
             cls._engine = create_async_engine(cls.DATABASE_URL)
-        return cls._engine
 
     @classmethod
     def get_sessionmaker(cls) -> async_sessionmaker:
         """
         Create an asynchronous session factory for database sessions.
         """
+        if cls._engine is None:
+            cls.set_engine()
         if cls._sessions is None:
-            engine = cls.get_engine()
-            cls._sessions = async_sessionmaker(engine)
+            cls._sessions = async_sessionmaker(cls._engine)
         return cls._sessions
 
     @classmethod
@@ -63,8 +63,9 @@ class DatabaseProvider:
         """
         Initialize database and create tables if they don't exist. Idempotent.
         """
-        engine = cls.get_engine()
-        async with engine.begin() as connection:
+        cls.set_engine()
+        async with cls._engine.begin() as connection:
+            await connection.execute(text("PRAGMA journal_mode=WAL"))
             await connection.run_sync(Base.metadata.create_all)
 
     @classmethod
