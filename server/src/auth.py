@@ -8,6 +8,7 @@ from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 load_dotenv()
+APP_ENV = os.getenv("APP_ENV")
 DOMAIN = os.getenv("AUTH0_DOMAIN")
 AUDIENCE = os.getenv("AUTH0_AUDIENCE")
 ALGORITHMS = os.getenv("AUTH0_ALGORITHMS")
@@ -25,7 +26,9 @@ class AuthError(HTTPException):
 async def fetch_jwks(url: str) -> dict:
     """Fetch JWKS from the Auth0 API"""
 
-    connector = TCPConnector(ssl=False) # Bad practice. Fix this in the future
+    connector = None
+    if APP_ENV == "development":
+        connector = TCPConnector(ssl=False)
 
     try:
         async with ClientSession(connector=connector) as session:
