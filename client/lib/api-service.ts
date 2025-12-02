@@ -9,6 +9,14 @@ export interface SelectedDate {
   textColor?: string
 }
 
+// Convert date to ISO string format (YYYY-MM-DD)
+function toStrIsoDate(date: SelectedDate): string {
+  const year = String(date.year).padStart(4, '0')
+  const month = String(date.month).padStart(2, '0')
+  const day = String(date.day).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 type ApiResult<T = unknown> =
   | { ok: true; data: T | null }
   | { ok: false; error: string }
