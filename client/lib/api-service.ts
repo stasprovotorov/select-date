@@ -1,6 +1,9 @@
 // API service for calendar operations
 // Encapsulates all HTTP request logic
 
+import { BatchItem } from "@/app/api/hooks/use-debounce"
+import { text } from "stream/consumers"
+
 export interface SelectedDate {
   year: number
   month: number
@@ -56,4 +59,26 @@ export async function selectDate(date: SelectedDate): Promise<ApiResult> {
 // Deselect a date (DELETE)
 export async function deselectDate(date: SelectedDate): Promise<ApiResult> {
   return makeCalendarRequest('DELETE', JSON.stringify(date))
+}
+
+export async function sendCalendarBatch(items: BatchItem[]): Promise<void> {
+  const payload = items.map((item) => ({
+    action: item.action,
+    date: item.date,
+    color: item.color,
+    textColor: item.textColor,
+    operId: item.operId
+  }))
+
+  const body = JSON.stringify(payload)
+
+  try {
+    const res = await fetch("api/calendar/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json"},
+      body
+    })
+  } catch (error) {
+    console.error(error)
+  }
 }
