@@ -23,12 +23,12 @@ export function useDebounceBatch({
   datesBatchSender, 
   clearBufferOnBeforeUnload = true 
 }: useDebounceBatchOptions) {
-  const datesBufferRef = useRef<Map<string, BufferDate>>(new Map())
+  const dateBufferRef = useRef<Map<string, BufferDate>>(new Map())
   const timerRef = useRef<number | undefined>(undefined)
-  const datesBatchSenderRef = useRef(datesBatchSender)
+  const dateBatchSenderRef = useRef(datesBatchSender)
 
   useEffect(() => {
-    datesBatchSenderRef.current = datesBatchSender
+    dateBatchSenderRef.current = datesBatchSender
   }, [datesBatchSender])
 
   const clearTimer = useCallback (() => {
@@ -40,7 +40,7 @@ export function useDebounceBatch({
 
   const buildPayloadFromBuffer = useCallback((): DateBatchItem[] => {
     const payload: DateBatchItem[] = []
-    for (const [, { countForDate, lastDate }] of datesBufferRef.current.entries()) {
+    for (const [, { countForDate, lastDate }] of dateBufferRef.current.entries()) {
       if (countForDate % 2 === 1) {
         payload.push(lastDate)
       }
@@ -51,9 +51,9 @@ export function useDebounceBatch({
   const flushBufferAndSend = useCallback((): ApiDateBatchResult | Promise<ApiDateBatchResult> => {
     clearTimer()
     const payload = buildPayloadFromBuffer()
-    datesBufferRef.current.clear()
-    const sendDatesBatchToApi = datesBatchSenderRef.current
-    const apiResponse = sendDatesBatchToApi(payload)
+    dateBufferRef.current.clear()
+    const sendDateBatchToApi = dateBatchSenderRef.current
+    const apiResponse = sendDateBatchToApi(payload)
     return apiResponse
   }, [buildPayloadFromBuffer, clearTimer])
 
@@ -78,22 +78,22 @@ export function useDebounceBatch({
   const bufferDateForSending = useCallback(
     (dateBatchItem: DateBatchItem): ApiDateBatchResult | Promise<ApiDateBatchResult> => { 
       const keyDate = dateBatchItem.date
-      const dateExistBuffer = datesBufferRef.current.get(keyDate)
+      const dateExistBuffer = dateBufferRef.current.get(keyDate)
       let apiResponse: ApiDateBatchResult | Promise<ApiDateBatchResult>
 
       if (dateExistBuffer) {
         dateExistBuffer.countForDate += 1
         dateExistBuffer.lastDate = dateBatchItem
-        datesBufferRef.current.set(keyDate, dateExistBuffer)
+        dateBufferRef.current.set(keyDate, dateExistBuffer)
       } else {
         const dateToBuffer: BufferDate = {
           countForDate: 1,
           lastDate: dateBatchItem
         }
-        datesBufferRef.current.set(keyDate, dateToBuffer)
+        dateBufferRef.current.set(keyDate, dateToBuffer)
       }
 
-      if (maxBatchSize && datesBufferRef.current.size >= maxBatchSize) {
+      if (maxBatchSize && dateBufferRef.current.size >= maxBatchSize) {
         apiResponse = flushBufferAndSend()
       } else {
         apiResponse = scheduleFlushBufferAndSend()
@@ -108,7 +108,7 @@ export function useDebounceBatch({
 
     const clearBufferIfTabClosed = () => { 
       clearTimer()
-      datesBufferRef.current.clear() 
+      dateBufferRef.current.clear() 
     }
     window.addEventListener("pagehide", clearBufferIfTabClosed)
     window.addEventListener("beforeunload", clearBufferIfTabClosed)
@@ -122,3 +122,4 @@ export function useDebounceBatch({
 
   return { bufferDateForSending }
 }
+ 
