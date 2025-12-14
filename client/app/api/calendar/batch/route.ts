@@ -17,17 +17,6 @@ export async function POST(request: Request): Promise<Response> {
   headers.set('Content-Type', 'application/json')
   headers.set('Content-Length', String(bodyLen))
 
-  // const backendRes = await fetch(backendURL, {
-  //   method: request.method,
-  //   headers,
-  //   body: strJsonBody
-  // })
-
-  // return new Response(backendRes.body, { 
-  //     status: backendRes.status, 
-  //     headers: backendRes.headers
-  // })
-
   return await fetch(backendURL, {
     method: request.method,
     headers,
