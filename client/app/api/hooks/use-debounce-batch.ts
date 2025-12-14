@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react"
 import { type ApiDateBatchResult } from "../../../lib/api-service"
+import { SelectedDate } from "../../../components/calendar"
+import { parseIsoDate } from "../../../lib/utils"
 
 export type DateBatchItem = {
   action: "select" | "deselect"
@@ -8,56 +10,79 @@ export type DateBatchItem = {
   textColor?: string
 }
 
-type BufferDate = { countForDate: number; lastDate: DateBatchItem }
+type DateBufferItem = { countForDate: number; lastDate: DateBatchItem }
 
 type useDebounceBatchOptions = {
   delay: number
   maxBatchSize?: number
-  datesBatchSender: ((payload: DateBatchItem[]) => ApiDateBatchResult | Promise<ApiDateBatchResult>)
-  clearBufferOnBeforeUnload?: boolean
+  dateBatchSender: ((payload: DateBatchItem[]) => ApiDateBatchResult | Promise<ApiDateBatchResult>)
+  clearBufferOnBeforeUnload: boolean
 }
 
 export function useDebounceBatch({ 
   delay, 
   maxBatchSize, 
-  datesBatchSender, 
+  dateBatchSender, 
   clearBufferOnBeforeUnload = true 
 }: useDebounceBatchOptions) {
-  const dateBufferRef = useRef<Map<string, BufferDate>>(new Map())
+  const dateBufferRef = useRef<Map<string, DateBufferItem>>(new Map())
+  const dateBatchRef = useRef<DateBatchItem[]>([])
+  const dateBatchSenderRef = useRef(dateBatchSender)
   const timerRef = useRef<number | undefined>(undefined)
-  const dateBatchSenderRef = useRef(datesBatchSender)
-
+  
   useEffect(() => {
-    dateBatchSenderRef.current = datesBatchSender
-  }, [datesBatchSender])
+    dateBatchSenderRef.current = dateBatchSender
+  }, [dateBatchSender])
 
-  const clearTimer = useCallback (() => {
+  const clearTimer = useCallback(() => {
     if (timerRef.current !== undefined) {
       window.clearTimeout(timerRef.current)
       timerRef.current = undefined
     }
   }, [])
 
-  const buildPayloadFromBuffer = useCallback((): DateBatchItem[] => {
-    const payload: DateBatchItem[] = []
+  /**
+   * Build a batch of date operations to be sent to the server API.
+   */
+  const buildBatchFromBuffer = useCallback(() => {
+    // Clear batch
+    dateBatchRef.current = [] 
+
+    // Add only useful actions to the batch
     for (const [, { countForDate, lastDate }] of dateBufferRef.current.entries()) {
       if (countForDate % 2 === 1) {
-        payload.push(lastDate)
+        dateBatchRef.current.push(lastDate)
       }
     }
-    return payload
   }, [])
 
+  /**
+   * Build a batch of operations from the buffer, clear the buffer, and send the batch to the server API.
+   */
   const flushBufferAndSend = useCallback((): ApiDateBatchResult | Promise<ApiDateBatchResult> => {
     clearTimer()
-    const payload = buildPayloadFromBuffer()
+    buildBatchFromBuffer()
     dateBufferRef.current.clear()
-    const sendDateBatchToApi = dateBatchSenderRef.current
-    const apiResponse = sendDateBatchToApi(payload)
-    return apiResponse
-  }, [buildPayloadFromBuffer, clearTimer])
 
-  const scheduleFlushBufferAndSend = useCallback((): Promise<ApiDateBatchResult> => {
+    let apiResponse: ApiDateBatchResult | Promise<ApiDateBatchResult>
+
+    // If the batch is empty (no useful data to send), skip sending a request to the server
+    if (dateBatchRef.current.length === 0) {
+      const message = "Batch is empty after building. Nothing to send to API"
+      apiResponse = { ok: true, results: [], message }
+      return apiResponse
+    }
+
+    const sendDateBatchToApi = dateBatchSenderRef.current
+    apiResponse = sendDateBatchToApi(dateBatchRef.current)
+    return apiResponse
+  }, [buildBatchFromBuffer, clearTimer])
+
+  /**
+   * Wait for the timer to elapse, build a batch of operations from the buffer, clear the buffer, 
+   * and send the batch to the server API.
+   */
+  const scheduleFlushBufferAndSend = useCallback(async (): Promise<ApiDateBatchResult> => {
     clearTimer()
     return new Promise((resolve, reject) => {
       timerRef.current = window.setTimeout(() => {
@@ -66,7 +91,7 @@ export function useDebounceBatch({
           const apiResponse = flushBufferAndSend()
           resolve(apiResponse)
         } catch (err) {
-          const message = "scheduleFlushBufferAndSend: Execution flushBufferAndSend failed"
+          const message = "scheduleFlushBufferAndSend(): Execution flushBufferAndSend() failed!"
           const wrapped_err = new Error(message) as any
           wrapped_err.originalError = err
           reject(wrapped_err)
@@ -75,6 +100,9 @@ export function useDebounceBatch({
     })
   }, [clearTimer, delay, flushBufferAndSend])
 
+  /**
+   * Add date item into buffer to be sent to server API.
+   */
   const bufferDateForSending = useCallback(
     (dateBatchItem: DateBatchItem): ApiDateBatchResult | Promise<ApiDateBatchResult> => { 
       const keyDate = dateBatchItem.date
@@ -86,7 +114,7 @@ export function useDebounceBatch({
         dateExistBuffer.lastDate = dateBatchItem
         dateBufferRef.current.set(keyDate, dateExistBuffer)
       } else {
-        const dateToBuffer: BufferDate = {
+        const dateToBuffer: DateBufferItem = {
           countForDate: 1,
           lastDate: dateBatchItem
         }
@@ -101,6 +129,50 @@ export function useDebounceBatch({
       
       return apiResponse
     }, [maxBatchSize, flushBufferAndSend, scheduleFlushBufferAndSend]
+  )
+
+  /**
+   * // Build an array of dates to be rolled back based on the server API response.
+   */
+  const buildToRollback = useCallback(
+    (apiResponse: ApiDateBatchResult): Array<[string, SelectedDate]> => {
+      let toRollback: Array<[string, SelectedDate]> = []
+
+      if (!apiResponse.ok) {
+        // Build the rollback array based on the HTTP response to the request
+        for (const dateItem of dateBatchRef.current) {
+          const { year, month, day } = parseIsoDate(dateItem.date)
+
+          const toRollbackItem: SelectedDate = {
+            year: year,
+            month: month,
+            day: day,
+            color: dateItem?.color,
+            textColor: dateItem?.textColor
+          }
+
+          toRollback.push([dateItem.action, toRollbackItem])
+        }
+      } else {
+        // Build the rollback array based on each item's API response
+        for (const dateItem of apiResponse.results) {
+          if (!dateItem.ok) {
+            const { year, month, day } = parseIsoDate(dateItem.date)
+
+            const toRollbackItem: SelectedDate = {
+              year: year,
+              month: month,
+              day: day,
+              color: dateItem?.color,
+              textColor: dateItem?.textColor
+            }
+
+            toRollback.push([dateItem.action, toRollbackItem])
+          }
+        }
+      }
+      return toRollback
+    }, []
   )
 
   useEffect(() => {
@@ -120,6 +192,5 @@ export function useDebounceBatch({
     }
   }, [clearBufferOnBeforeUnload, clearTimer])
 
-  return { bufferDateForSending }
+  return { dateBufferRef, bufferDateForSending, buildToRollback }
 }
- 
