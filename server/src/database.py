@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from schemas import SelectedDateSchema
+from schemas import SelectedDateSchema, DateBatch, ApiDateItemResult
 
 
 class Base(DeclarativeBase):
@@ -134,3 +134,47 @@ class DatabaseProvider:
             deleted_date = dict(row)
             await session.commit()
             return dict(deleted_date)
+        
+    @classmethod
+    async def process_batch(cls, user_id: str, batch: DateBatch) -> dict:
+        process = {
+            "select": cls.add_selected_date,
+            "deselect": cls.delete_selected_date
+        }
+        results = []
+
+        for date_operation in batch:
+            year, month, day = map(int, date_operation.date.split("-"))
+
+            selected_date = SelectedDateSchema(
+                year=year, 
+                month=month, 
+                day=day, 
+                color=date_operation.color,
+                textColor=date_operation.textColor)
+            
+            try:
+                returning = await process[date_operation.action](user_id, selected_date)
+                results.append(
+                    ApiDateItemResult(
+                        ok=True,
+                        action=date_operation.action,
+                        date=date_operation.date,
+                        color=returning["color"] if date_operation.action == "select" else None,
+                        textColor=returning["color_text"] if date_operation.action == "select" else None
+                    )
+                )
+            except DatabaseError as err:
+                results.append(
+                    ApiDateItemResult(
+                        ok=False,
+                        action=date_operation.action,
+                        date=date_operation.date,
+                        color=date_operation.color if date_operation.action == "select" else None,
+                        textColor=date_operation.textColor if date_operation.action == "select" else None,
+                        message=err.detail
+                    )
+                )
+
+        return results
+    
