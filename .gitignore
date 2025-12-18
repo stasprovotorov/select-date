@@ -28,5 +28,7 @@
 
 # server
 /server/.venv
+/server/.env
 /server/__pycache__
 /server/src/__pycache__
+/server/src/database.db

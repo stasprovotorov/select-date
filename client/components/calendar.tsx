@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { selectDate, deselectDate, type SelectedDate } from "@/lib/api-service"
+import { cn, toStrIsoDate } from "@/lib/utils"
+import { sendDateBatchToApi } from "@/lib/api-service"
+import { useDebounceBatch, type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
 
 const months = [
   "January",
@@ -33,11 +34,27 @@ const colorOptions = [
   { name: "Teal", value: "bg-teal-500 hover:bg-teal-600", textColor: "text-white" },
 ]
 
+export type SelectedDate = {
+  year: number
+  month: number
+  day: number
+  color?: string
+  textColor?: string
+}
 
 export default function Calendar() {
   const [selectedDates, setSelectedDates] = useState<SelectedDate[]>([])
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
-  const [selectedColor, setSelectedColor] = useState(colorOptions[0]) // Added selected color state
+  const [selectedColor, setSelectedColor] = useState(colorOptions[0])
+  const prevSelectedDatesRef = useRef<SelectedDate[]>([])
+
+  // Initialize debounce batch hook to buffer date changes and send them to the API 
+  const { dateBufferRef, bufferDateForSending, buildToRollback } = useDebounceBatch({
+    delay: 700,
+    maxBatchSize: 50,
+    dateBatchSender: sendDateBatchToApi,
+    clearBufferOnBeforeUnload: true
+  })
 
   useEffect(() => {
     const loadDatesFromStorage = () => {
@@ -64,10 +81,12 @@ export default function Calendar() {
   }
 
   const toggleDate = async (month: number, day: number) => {
-    const existingDateIndex = selectedDates.findIndex(
-      (date) => date.year === currentYear && date.month === month && date.day === day,
-    )
-
+    // If is not bufferind, freeze previous state of Сalendar
+    const isBuffering = Boolean(dateBufferRef?.current && dateBufferRef.current.size > 0)
+    if (!isBuffering) {
+      prevSelectedDatesRef.current = [...selectedDates]
+    }
+    
     const newDate: SelectedDate = {
       year: currentYear,
       month,
@@ -75,26 +94,69 @@ export default function Calendar() {
       color: selectedColor.value,
       textColor: selectedColor.textColor,
     }
-    const prevDates = [...selectedDates]
 
-    let newDates: SelectedDate[]
-    let result
+    // Find index of the newDate in selectedDates, or -1 if not found
+    const existingDateIndex = selectedDates.findIndex(
+      (date) => date.year === currentYear && date.month === month && date.day === day
+    )
 
+    let newSelectedDates: SelectedDate[]
+    let action: "select" | "deselect"
+
+    // Determine action for newDate and construct updated selectedDates as newSelectedDates
     if (existingDateIndex >= 0) {
-      newDates = selectedDates.filter((_, index) => index !== existingDateIndex)
-      result = await deselectDate(newDate)
+      action = "deselect"
+      newSelectedDates = selectedDates.filter((_, index) => index !== existingDateIndex)
     } else {
-      newDates = [...selectedDates, newDate]
-      result = await selectDate(newDate)
+      action = "select"
+      newSelectedDates = [...selectedDates, newDate]
     }
 
-    setSelectedDates(newDates)
-    saveDatesToStorage(newDates)
+    // Provide optimistic updates for the user
+    setSelectedDates(newSelectedDates)
+    saveDatesToStorage(newSelectedDates)
 
-    if (!result.ok) {
-      setSelectedDates(prevDates) // rollback
-      saveDatesToStorage(prevDates)
-      alert(result.error)
+    const dateToBuffer: DateBatchItem = {
+      action: action,
+      date: toStrIsoDate(newDate.year, newDate.month, newDate.day),
+      color: action === "select" ? newDate.color : undefined,
+      textColor: action == "select" ? newDate.textColor : undefined
+    }
+
+    // Buffer the new date for sending to the API when the debounce timer expires
+    const apiDateResults = await bufferDateForSending(dateToBuffer)
+    
+    // Build an array of dates to rollback based on negative API responses
+    const toRollbackDates = buildToRollback(apiDateResults)
+
+    // Rollback optimistic updates if toRollbackDates is not empty
+    if (toRollbackDates.length !== 0) {
+      let rollbackSelectedDates: SelectedDate[] = []
+      const toAddDates: SelectedDate[] = []
+      const toRemoveDatesIndex = new Set()
+
+      // Group dates by action to determine rollback operations
+      for (const [action, rollbackDate] of toRollbackDates) {
+        if (action === "select") {
+          toRemoveDatesIndex.add(selectedDates.findIndex(
+            (date) => 
+              date.year === rollbackDate.year && 
+              date.month === rollbackDate.month && 
+              date.day === rollbackDate.day
+          ))
+        } else if (action === "deselect") { 
+          toAddDates.push(rollbackDate)
+        }
+      }
+
+      // Build updated selectedDates by removing dates marked for rollback (failed "select" actions)
+      rollbackSelectedDates = prevSelectedDatesRef.current.filter((_, index) => !toRemoveDatesIndex.has(index))
+      // Re-add dates that failed to be removed on the server (rollback failed "deselect" actions)
+      rollbackSelectedDates.push(...toAddDates)
+
+      // Apply rollback
+      setSelectedDates(rollbackSelectedDates)
+      saveDatesToStorage(rollbackSelectedDates) 
     }
   }
 

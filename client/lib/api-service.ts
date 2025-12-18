@@ -1,66 +1,50 @@
-// API service for calendar operations
-// Encapsulates all HTTP request logic
+import { type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
 
-export interface SelectedDate {
-  year: number
-  month: number
-  day: number
+export type ApiDateItemResult = {
+  ok: boolean
+  action: "select" | "deselect"
+  date: string
   color?: string
   textColor?: string
+  message?: string
 }
 
-type ApiResult<T = unknown> =
-  | { ok: true; data: T | null }
-  | { ok: false; error: string }
+export type ApiDateBatchResult = 
+ | { ok: true; results: ApiDateItemResult[]; message?: string }
+ | { ok: false; message: string }
 
-// Convert date to ISO string format (YYYY-MM-DD)
-function toStrIsoDate(date: SelectedDate): string {
-  const year = String(date.year).padStart(4, '0')
-  const month = String(date.month).padStart(2, '0')
-  const day = String(date.day).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+export async function sendDateBatchToApi(dateBatch: DateBatchItem[]): Promise<ApiDateBatchResult> {
+  const payload = dateBatch.map((dateItem) => ({
+    action: dateItem.action,
+    date: dateItem.date,
+    color: dateItem.action === "select" ? dateItem.color : undefined,
+    textColor: dateItem.action === "select" ? dateItem.textColor : undefined
+  }))
 
-// Common function to make calendar API requests
-async function makeCalendarRequest(
-  date: SelectedDate,
-  method: 'POST' | 'DELETE',
-  body?: string
-): Promise<ApiResult> {
-  const strIsoDate = encodeURIComponent(toStrIsoDate(date))
-  const url = `/api/calendar/${strIsoDate}`
-
-  const headers: HeadersInit = {}
-  if (body) {
-    headers['Content-Type'] = 'application/json'
-  }
+  const bodyReq = JSON.stringify(payload)
 
   try {
-    const res = await fetch(url, {
-      method,
-      headers,
-      body
+    const response = await fetch("api/calendar/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json"},
+      body: bodyReq,
+      keepalive: true
     })
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: 'Unknown error' }))
-      return { ok: false, error: String(error) }
+    if (!response.ok) {
+      return { ok: false, message: `HTTP ${response.status}`}
     }
 
-    const data = res.status === 204 ? null : await res.json().catch(() => null)
-    return { ok: true, data }
-  } catch (err: unknown) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    let bodyRes: ApiDateBatchResult
+    try {
+      bodyRes = await response.json()
+    } catch {
+      return { ok: false, message: "Invalid JSON from server API"}
+    }
+
+    return bodyRes
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { ok: false, message }
   }
 }
-
-// Select a date (POST)
-export async function selectDate(date: SelectedDate): Promise<ApiResult> {
-  return makeCalendarRequest(date, 'POST', JSON.stringify(date))
-}
-
-// Deselect a date (DELETE)
-export async function deselectDate(date: SelectedDate): Promise<ApiResult> {
-  return makeCalendarRequest(date, 'DELETE')
-}
-
