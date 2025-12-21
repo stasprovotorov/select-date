@@ -48,3 +48,29 @@ export async function sendDateBatchToApi(dateBatch: DateBatchItem[]): Promise<Ap
     return { ok: false, message }
   }
 }
+
+type getDatesForUserResult = 
+ | { ok: true, dates: DateBatchItem[]}
+ | { ok: false, message: string }
+
+export async function getDatesForUser(): Promise<getDatesForUserResult> {
+  try {
+    const response = await fetch("api/calendar/sync", { method: "GET" })
+
+    if (!response.ok) {
+      return { ok: false, message: `HTTP ${response.status}`}
+    }
+
+    let body: getDatesForUserResult
+    try {
+      body = await response.json()
+    } catch {
+      return { ok: false, message: "Invalid JSON from server API"}
+    }
+
+    return body
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { ok: false, message }
+  }
+}
