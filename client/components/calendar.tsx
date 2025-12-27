@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { cn, toStrIsoDate } from "@/lib/utils"
+import { cn, toStrIsoDate, parseIsoDate } from "@/lib/utils"
 import { sendDateBatchToApi } from "@/lib/api-service"
 import { useDebounceBatch, type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
+
+const LOCAL_STORAGE_KEY = "calendar-selected-dates"
 
 const months = [
   "January",
@@ -42,7 +44,9 @@ export type SelectedDate = {
   textColor?: string
 }
 
-export default function Calendar() {
+type CalendarProps = { serverDates?: DateBatchItem[] | null }
+
+export default function Calendar({ serverDates = null }: CalendarProps) {
   const [selectedDates, setSelectedDates] = useState<SelectedDate[]>([])
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [selectedColor, setSelectedColor] = useState(colorOptions[0])
@@ -58,14 +62,34 @@ export default function Calendar() {
 
   useEffect(() => {
     const loadDatesFromStorage = () => {
+      let storedDates: SelectedDate[] = []
+
+      if (serverDates?.length) {
+        for (const serverDate of serverDates) {
+          const { year, month, day } = parseIsoDate(serverDate.date)
+
+          const selectedDate: SelectedDate = {
+            year: year,
+            month: month - 1,
+            day,
+            color: serverDate.color,
+            textColor: serverDate.textColor
+          }
+
+          storedDates.push(selectedDate)
+        }
+        setSelectedDates(storedDates)
+        return
+      }
+
       try {
-        const storedDates = localStorage.getItem("calendar-selected-dates")
+        const storedDates = localStorage.getItem(LOCAL_STORAGE_KEY)
         if (storedDates) {
           const dates = JSON.parse(storedDates)
           setSelectedDates(dates)
         }
-      } catch (error) {
-        console.error("Error loading dates from localStorage:", error)
+      } catch (err) {
+        console.error("Error loading dates from localStorage:", err)
       }
     }
 
@@ -74,7 +98,7 @@ export default function Calendar() {
 
   const saveDatesToStorage = (dates: SelectedDate[]) => {
     try {
-      localStorage.setItem("calendar-selected-dates", JSON.stringify(dates))
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dates))
     } catch (error) {
       console.error("Error saving dates to localStorage:", error)
     }
