@@ -6,7 +6,7 @@ if (!BACKEND_URL) {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const backendURL = `${BACKEND_URL}/batch`
+  const backendURL = `${BACKEND_URL}/sync`
   const authToken = await getJwt()
   const headers = new Headers(request.headers)
   
