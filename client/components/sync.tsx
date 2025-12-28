@@ -3,7 +3,7 @@
 import React, { useEffect, useState, ReactElement, useRef } from "react"
 import { getDatesForUser } from "../lib/api-service"
 import { type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
-import { type SelectedDate } from "@/components/calendar"
+import { SyncContext } from "./sync-context"
 
 type SyncProps = { children: ReactElement }
 
@@ -11,7 +11,7 @@ const SESSION_STORAGE_KEY = "isCalendarSynced"
 const SESSION_STORAGE_VALUE = "true"
 
 export default function Sync({ children }: SyncProps) {
-  const [dates, setDates] = useState<DateBatchItem[] | SelectedDate[] | null>(null)
+  const [dates, setDates] = useState<DateBatchItem[] | null>(null)
   const isMountedRef = useRef(true)
 
   useEffect(() => {
@@ -52,5 +52,10 @@ export default function Sync({ children }: SyncProps) {
       </div>
     )
   }
-  return React.cloneElement(children, { serverDates: dates })
+  
+  return (
+    <SyncContext.Provider value={dates}>
+      {children}
+    </SyncContext.Provider>
+  )
 }
