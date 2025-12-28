@@ -12,11 +12,11 @@ const SESSION_STORAGE_VALUE = "true"
 
 export default function Sync({ children }: SyncProps) {
   const [dates, setDates] = useState<DateBatchItem[] | null>(null)
+  const wasSynced = sessionStorage.getItem(SESSION_STORAGE_KEY) === SESSION_STORAGE_VALUE
   const isMountedRef = useRef(true)
 
   useEffect(() => {
     isMountedRef.current = true
-    const wasSynced = sessionStorage.getItem(SESSION_STORAGE_KEY) === SESSION_STORAGE_VALUE
 
     async function doSync() {
       if (!wasSynced) {
@@ -45,7 +45,7 @@ export default function Sync({ children }: SyncProps) {
     return () => { isMountedRef.current = false }
   }, [])
 
-  if (dates === null) {
+  if (!wasSynced) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         Synchronization...
