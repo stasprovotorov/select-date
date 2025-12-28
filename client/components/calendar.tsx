@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { cn, toStrIsoDate, parseIsoDate } from "@/lib/utils"
 import { sendDateBatchToApi } from "@/lib/api-service"
 import { useDebounceBatch, type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
+import { useSyncDates } from "./sync-context"
 
 const LOCAL_STORAGE_KEY = "calendar-selected-dates"
 
@@ -44,13 +45,12 @@ export type SelectedDate = {
   textColor?: string
 }
 
-type CalendarProps = { serverDates?: DateBatchItem[] | null }
-
-export default function Calendar({ serverDates = null }: CalendarProps) {
+export default function Calendar() {
   const [selectedDates, setSelectedDates] = useState<SelectedDate[]>([])
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [selectedColor, setSelectedColor] = useState(colorOptions[0])
   const prevSelectedDatesRef = useRef<SelectedDate[]>([])
+  const serverDates = useSyncDates()
 
   // Initialize debounce batch hook to buffer date changes and send them to the API 
   const { dateBufferRef, bufferDateForSending, buildToRollback } = useDebounceBatch({
