@@ -1,12 +1,12 @@
 from datetime import date
 
 from fastapi import HTTPException
-from sqlalchemy import Date, String, delete, insert, text
+from sqlalchemy import Date, String, select, delete, insert, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from schemas import SelectedDateSchema, DateBatch, ApiDateItemResult
+from schemas import SelectedDateSchema, DateItemSchema, ApiDateItemResult
 
 
 class Base(DeclarativeBase):
@@ -37,7 +37,7 @@ class DatabaseProvider:
     """
     DATABASE_URL: str = "sqlite+aiosqlite:///database.db"
     _engine: AsyncEngine | None = None
-    _sessions: async_sessionmaker | None = None
+    _async_session: async_sessionmaker[AsyncSession] | None = None
 
     @classmethod
     def set_engine(cls) -> AsyncEngine:
@@ -48,15 +48,15 @@ class DatabaseProvider:
             cls._engine = create_async_engine(cls.DATABASE_URL)
 
     @classmethod
-    def get_sessionmaker(cls) -> async_sessionmaker:
+    def _get_async_session(cls) -> async_sessionmaker[AsyncSession]:
         """
         Create an asynchronous session factory for database sessions.
         """
         if cls._engine is None:
             cls.set_engine()
-        if cls._sessions is None:
-            cls._sessions = async_sessionmaker(cls._engine)
-        return cls._sessions
+        if cls._async_session is None:
+            cls._async_session = async_sessionmaker(cls._engine)
+        return cls._async_session
 
     @classmethod
     async def initialize_database(cls):
@@ -76,7 +76,7 @@ class DatabaseProvider:
         """
         month = selected_date.month + 1 # Fuck yeah! \m_
         date_data = date(selected_date.year, month, selected_date.day)
-        AsyncSessions = cls.get_sessionmaker()
+        AsyncSessions = cls._get_async_session()
 
         async with AsyncSessions() as session:
             try:
@@ -111,7 +111,7 @@ class DatabaseProvider:
         """
         month = selected_date.month + 1 # This must be fixed on the client side
         date_data = date(selected_date.year, month, selected_date.day)
-        AsyncSessions = cls.get_sessionmaker()
+        AsyncSessions = cls._get_async_session()
 
         async with AsyncSessions() as session:
             stmt = delete(SelectedDateModel).where(
@@ -134,47 +134,81 @@ class DatabaseProvider:
             deleted_date = dict(row)
             await session.commit()
             return dict(deleted_date)
+
+    @classmethod
+    async def process_batch(cls, user_id: str, date_batch: list[DateItemSchema]) -> ApiDateItemResult:
+        batch_results = []
+        async_session = cls._get_async_session()
+
+        async with async_session.begin() as connection:
+            for date_item in date_batch:
+                savepoint = await connection.begin_nested()
+                date_obj = date.fromisoformat(date_item.date)
+
+                try:
+                    if date_item.action == "select":
+                        statement = insert(SelectedDateModel).values(
+                            user_id=user_id,
+                            calendar_date=date_obj,
+                            color=date_item.color,
+                            color_text=date_item.textColor
+                        ).returning(SelectedDateModel.__table__.columns)
+                    elif date_item.action == "deselect":
+                        statement = delete(SelectedDateModel).where(
+                            SelectedDateModel.user_id == user_id,
+                            SelectedDateModel.calendar_date == date_obj
+                        ).returning(SelectedDateModel.__table__.columns)
+                    else:
+                        raise DatabaseError(422, "Unknown action for date")
+                    
+                    execution_result = await connection.execute(statement)
+                    date_item_row = execution_result.mappings().first()
+                    date_value: date = date_item_row["calendar_date"]
+                    date_iso = date_value.isoformat()
+
+                    batch_results.append(
+                        ApiDateItemResult(
+                            ok=True,
+                            action=date_item.action,
+                            date=date_iso,
+                            color=date_item_row["color"],
+                            textColor=date_item_row["color_text"]
+                        )
+                    )
+                    await savepoint.commit()
+                except Exception as error:
+                    await savepoint.rollback()
+
+                    batch_results.append(
+                        ApiDateItemResult(
+                            ok=False,
+                            action=date_item.action,
+                            date=date_item.date,
+                            color=date_item.color if date_item.action == "select" else None,
+                            textColor=date_item.textColor if date_item.action == "select" else None,
+                            message=str(error)
+                        )
+                    )
+        return batch_results
         
     @classmethod
-    async def process_batch(cls, user_id: str, batch: DateBatch) -> dict:
-        process = {
-            "select": cls.add_selected_date,
-            "deselect": cls.delete_selected_date
-        }
-        results = []
+    async def get_user_dates(cls, user_id: str) -> dict:
+        AsyncSessions = cls._get_async_session()
 
-        for date_operation in batch:
-            year, month, day = map(int, date_operation.date.split("-"))
+        async with AsyncSessions() as session:
+            stmt = select(SelectedDateModel).where(SelectedDateModel.user_id == user_id)
+            result = await session.execute(stmt)
+            rows = result.scalars().all()
 
-            selected_date = SelectedDateSchema(
-                year=year, 
-                month=month, 
-                day=day, 
-                color=date_operation.color,
-                textColor=date_operation.textColor)
-            
-            try:
-                returning = await process[date_operation.action](user_id, selected_date)
-                results.append(
-                    ApiDateItemResult(
-                        ok=True,
-                        action=date_operation.action,
-                        date=date_operation.date,
-                        color=returning["color"] if date_operation.action == "select" else None,
-                        textColor=returning["color_text"] if date_operation.action == "select" else None
-                    )
-                )
-            except DatabaseError as err:
-                results.append(
-                    ApiDateItemResult(
-                        ok=False,
-                        action=date_operation.action,
-                        date=date_operation.date,
-                        color=date_operation.color if date_operation.action == "select" else None,
-                        textColor=date_operation.textColor if date_operation.action == "select" else None,
-                        message=err.detail
-                    )
-                )
+        selected_dates = []
+        for date in rows:
+            selected_date = {
+                "action": "select",
+                "date": date.calendar_date,
+                "color": date.color,
+                "textColor": date.color_text
+            }
+            selected_dates.append(selected_date)
 
-        return results
+        return selected_dates
     
