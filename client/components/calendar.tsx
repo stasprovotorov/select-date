@@ -142,7 +142,7 @@ export default function Calendar() {
 
     const dateToBuffer: DateBatchItem = {
       action: action,
-      date: toStrIsoDate(newDate.year, newDate.month, newDate.day),
+      date: toStrIsoDate(newDate.year, newDate.month + 1, newDate.day), // Fix month
       color: action === "select" ? newDate.color : undefined,
       textColor: action == "select" ? newDate.textColor : undefined
     }
