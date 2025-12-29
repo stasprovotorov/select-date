@@ -80,7 +80,8 @@ async def requires_auth(
             public_key,
             algorithms=ALGORITHMS,
             audience=AUDIENCE,
-            issuer=DOMAIN
+            issuer=DOMAIN,
+            leeway=5
         )
         return payload
     except jwt.ExpiredSignatureError as err:
