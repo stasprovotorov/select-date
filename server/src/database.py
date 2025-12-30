@@ -2,11 +2,11 @@ from datetime import date
 
 from fastapi import HTTPException
 from sqlalchemy import Date, String, select, delete, insert, text
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from schemas import SelectedDateSchema, DateItemSchema, DateOperationSchema, DateOperationResultSchema, ApiDateItemResult, DateOperationType
+from schemas import DateItemSchema, DateOperationSchema, DateOperationResultSchema, DateOperationType
 
 
 class Base(DeclarativeBase):
@@ -39,6 +39,7 @@ class DatabaseProvider:
     _engine: AsyncEngine | None = None
     _async_session: async_sessionmaker[AsyncSession] | None = None
 
+
     @classmethod
     def set_engine(cls) -> AsyncEngine:
         """
@@ -46,6 +47,7 @@ class DatabaseProvider:
         """
         if cls._engine is None:
             cls._engine = create_async_engine(cls.DATABASE_URL)
+
 
     @classmethod
     def _get_async_session(cls) -> async_sessionmaker[AsyncSession]:
@@ -58,6 +60,7 @@ class DatabaseProvider:
             cls._async_session = async_sessionmaker(cls._engine)
         return cls._async_session
 
+
     @classmethod
     async def initialize_database(cls):
         """
@@ -67,6 +70,7 @@ class DatabaseProvider:
         async with cls._engine.begin() as connection:
             await connection.execute(text("PRAGMA journal_mode=WAL"))
             await connection.run_sync(Base.metadata.create_all)
+
 
     @classmethod
     async def process_batch(cls, user_id: str, batch: list[DateOperationSchema]) -> list[DateOperationResultSchema]:
@@ -115,7 +119,8 @@ class DatabaseProvider:
                     batch_results.append(DateOperationResultSchema(ok=False, operation=date_oper, message=repr(err)))
 
         return batch_results
-        
+
+
     @classmethod
     async def get_dates_by_user(cls, user_id: str) -> list[DateItemSchema]:
         dates = []
@@ -137,6 +142,6 @@ class DatabaseProvider:
                     color_text=date_row.color_text
                 )
                 dates.append(date_item)
-                
+
         return dates
     
