@@ -1,30 +1,15 @@
-import { type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
+export type DateItem = { calendarDate: string, colorBg: string, colorText: string }
+export type DateOperation = { operType: "insert" | "delete", item: DateItem }
+export type DateOperationResult = { ok: boolean, operation: DateOperation, message: string | null }
+export type DateBatchRequest = { batch: DateOperation[] }
+export type DateBatchResponse = { ok: boolean, results: DateOperationResult[], message: string | null }
+export type DatesByUser = { ok: boolean, items: DateItem[], message?: string }
 
-export type ApiDateItemResult = {
-  ok: boolean
-  action: "select" | "deselect"
-  date: string
-  color?: string
-  textColor?: string
-  message?: string
-}
-
-export type ApiDateBatchResult = 
- | { ok: true; results: ApiDateItemResult[]; message?: string }
- | { ok: false; message: string }
-
-export async function sendDateBatchToApi(dateBatch: DateBatchItem[]): Promise<ApiDateBatchResult> {
-  const payload = dateBatch.map((dateItem) => ({
-    action: dateItem.action,
-    date: dateItem.date,
-    color: dateItem.action === "select" ? dateItem.color : undefined,
-    textColor: dateItem.action === "select" ? dateItem.textColor : undefined
-  }))
-
-  const bodyReq = JSON.stringify(payload)
+export async function sendDateBatchToApi(dateBatch: DateBatchRequest): Promise<DateBatchResponse> {
+  const bodyReq = JSON.stringify(dateBatch)
 
   try {
-    const response = await fetch("api/calendar/batch", {
+    const response = await fetch("/api/v1/dates/batch", {
       method: "POST",
       headers: { "Content-Type": "application/json"},
       body: bodyReq,
@@ -32,45 +17,41 @@ export async function sendDateBatchToApi(dateBatch: DateBatchItem[]): Promise<Ap
     })
 
     if (!response.ok) {
-      return { ok: false, message: `HTTP ${response.status}`}
+      return { ok: false, results: [], message: `HTTP ${response.status}`}
     }
 
-    let bodyRes: ApiDateBatchResult
+    let bodyRes: DateBatchResponse
     try {
       bodyRes = await response.json()
     } catch {
-      return { ok: false, message: "Invalid JSON from server API"}
+      return { ok: false, results: [], message: "Invalid JSON from server API"}
     }
 
     return bodyRes
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return { ok: false, message }
+    return { ok: false, results: [], message }
   }
 }
 
-export type getDatesForUserResult = 
- | { ok: true, dates: DateBatchItem[] }
- | { ok: false, detail: string }
-
-export async function getDatesForUser(): Promise<getDatesForUserResult> {
+export async function getDatesForUser(): Promise<DatesByUser> {
   try {
-    const response = await fetch("api/calendar/sync", { method: "GET" })
-    let body
+    const response = await fetch("/api/v1/dates/sync", { method: "GET" })
+    let body: DatesByUser
 
     try {
       body = await response.json()
     } catch {
-      return { ok: false, detail: "Invalid JSON from server API"}
+      return { ok: false, items: [], message: "Invalid JSON from server API"}
     }
 
     if (!response.ok) {
-      return { ok: false, detail: body.detail }
+      return { ok: false, items: [], message: body.message }
     }
   
     return body
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return { ok: false, detail: message }
+    return { ok: false, items: [], message: message }
   }
 }
