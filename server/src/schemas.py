@@ -12,17 +12,17 @@ class DateOperationType(str, Enum):
 class DateItemSchema(BaseModel):
     calendar_date: date = Field(
         ...,
-        alias="date", 
+        alias="calendarDate", 
         description="Calendar date in ISO format (YYYY-MM-DD)."
     )
     color_bg: str = Field(
         ...,
-        alias="color", 
+        alias="colorBg", 
         description="Background color used to render the calendar cell."
     )
     color_text: str = Field(
         ...,
-        alias="textColor", 
+        alias="colorText", 
         description="Text color used for the date label."
     )
 
@@ -36,7 +36,7 @@ class DatesByUserSchema(BaseModel):
         ...,
         description="True if the fetch dates by user succeeded, False otherwise."
     )
-    dates: list[DateItemSchema] = Field(
+    items: list[DateItemSchema] = Field(
         default=[],
         description="List of dates for the user (empty list if none)."
     )
