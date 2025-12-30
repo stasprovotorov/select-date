@@ -1,7 +1,7 @@
 import React from "react"
-import { type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
+import { type DateItem } from "../lib/api-service"
 
-export type ServerDatesContextValue = DateBatchItem[] | null
+export type ServerDatesContextValue = DateItem[] | null
 
 export const SyncContext = React.createContext<ServerDatesContextValue>(null)
 
