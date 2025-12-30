@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, ReactElement, useRef } from "react"
-import { getDatesForUser } from "../lib/api-service"
-import { type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
+import { getDatesForUser, type DateItem } from "../lib/api-service"
 import { SyncContext } from "./sync-context"
 
 type SyncProps = { children: ReactElement }
@@ -11,7 +10,7 @@ const SESSION_STORAGE_KEY = "isCalendarSynced"
 const SESSION_STORAGE_VALUE = "true"
 
 export default function Sync({ children }: SyncProps) {
-  const [dates, setDates] = useState<DateBatchItem[] | null>(null)
+  const [dates, setDates] = useState<DateItem[] | null>(null)
   const wasSynced = sessionStorage.getItem(SESSION_STORAGE_KEY) === SESSION_STORAGE_VALUE
   const isMountedRef = useRef(true)
 
@@ -23,14 +22,14 @@ export default function Sync({ children }: SyncProps) {
         try {
         const serverResult = await getDatesForUser()
         if (!serverResult.ok) {
-          throw new Error(`Synchronization request failed: ${serverResult.detail}`)
+          throw new Error(`Synchronization request failed: ${serverResult.message}`)
         }
 
         if (!isMountedRef.current) {
           return { serverDates: null }
         }
 
-        setDates(serverResult.dates)
+        setDates(serverResult.items)
         sessionStorage.setItem(SESSION_STORAGE_KEY, SESSION_STORAGE_VALUE)
         } catch (err) {
           console.error("Synchronization failed (server API):", err)
