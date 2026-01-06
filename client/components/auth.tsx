@@ -1,16 +1,33 @@
 "use client"
 
-import { useUser } from "@auth0/nextjs-auth0"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { AuthContext, type AuthState } from "./auth-context"
+
+const CLIENT_URL = process.env.CLIENT_URL || ""
+const SERVER_URL = process.env.SERVER_URL || ""
+const SERVER_LOGIN_ENDPOINT = `${SERVER_URL}/api/v1/auth/login`
 
 export default function Auth({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useUser()
+  const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false, user: null})
+  const [isLoading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      window.location.href = "/auth/login"
-    }
-  }, [isLoading, user])
+    (async () => {
+      try {
+        const res = await fetch("api/v1/auth/me", { credentials: "include" })
+        if (res.ok) {
+          const user = await res.json()
+          setAuthState({ isAuthenticated: true, user })
+        } else {
+          window.location.href = SERVER_LOGIN_ENDPOINT
+        }
+      } catch {
+        window.location.href = SERVER_LOGIN_ENDPOINT
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
 
   if (isLoading) {
     return (
@@ -20,7 +37,11 @@ export default function Auth({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!user) return null 
+  if (!authState.isAuthenticated) return null 
 
-  return <>{children}</>
+  return (
+    <AuthContext.Provider value={authState}>
+      {children}
+    </AuthContext.Provider>
+  ) 
 }
