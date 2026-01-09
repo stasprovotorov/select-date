@@ -1,25 +1,28 @@
-import { getJwt } from '../../../../../lib/api-get-jwt'
+const SERVER_API_URL = process.env.SERVER_API_URL
 
-const BACKEND_URL = process.env.FASTAPI_URL || ''
-if (!BACKEND_URL) {
-  throw new Error('Missing required environment variable FASTAPI_URL in .env.local')
+if (!SERVER_API_URL) {
+  throw new Error("Missing required environment variable: SERVER_API_URL.")
 }
 
-export async function POST(request: Request): Promise<Response> {
-  const backendURL = `${BACKEND_URL}/api/v1/dates/batch`
-  const authToken = await getJwt()
-  const jsonBody = await new Response(request.body).json()
-  const strJsonBody = JSON.stringify(jsonBody)
-  const bodyLen = Buffer.byteLength(strJsonBody)
-  const headers = new Headers(request.headers)
-  
-  headers.set('Authorization', `Bearer ${authToken}`)
-  headers.set('Content-Type', 'application/json')
-  headers.set('Content-Length', String(bodyLen))
+export async function POST(req: Request): Promise<Response> {
+  const url = `${SERVER_API_URL}/dates/batch`
 
-  return await fetch(backendURL, {
-    method: request.method,
-    headers,
-    body: strJsonBody
+  const body = await req.json()
+  const bodyStr = JSON.stringify(body)
+  const bodyLen = String(Buffer.byteLength(bodyStr))
+
+  const cookie = req.headers.get("Cookie")
+
+  const headers = new Headers()
+  headers.set("Content-Type", "application/json")
+  headers.set('Content-Length', bodyLen)
+  if (cookie) {
+    headers.set("Cookie", cookie)
+  }
+
+  return await fetch(url, { 
+    method: req.method, 
+    headers, 
+    body: bodyStr 
   })
 }
