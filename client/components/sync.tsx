@@ -24,9 +24,6 @@ export default function Sync({ children }: SyncProps) {
     }
   })
   
-  console.log("isAuthenticated:", isAuthenticated)
-  console.log("wasSynced:", wasSynced)
-
   useEffect(() => {
     if (!isAuthenticated) return
     if (wasSynced) return
