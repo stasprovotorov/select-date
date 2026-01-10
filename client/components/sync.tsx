@@ -5,24 +5,16 @@ import { getDateByUser, type DateItem } from "../lib/api-service"
 import { SyncContext } from "./sync-context"
 import { AuthContext } from "./auth-context"
 import { getErrorMessage } from "@/lib/utils"
+import { setCalendarSynced, isCalendarSynced } from "@/lib/storage"
+import loadingMessage from "./ui/loading-message"
 
 type SyncProps = { children: ReactElement }
-
-const SESSION_STORAGE_KEY = "calendar-app:is-synced"
-const SESSION_STORAGE_VALUE = "true"
 
 export default function Sync({ children }: SyncProps) {
   const ranRef = useRef(false)
   const { isAuthenticated } = useContext(AuthContext)
   const [dates, setDates] = useState<DateItem[] | null>(null)
-
-  const [wasSynced, setWasSynced] = useState<boolean>(() => {
-    try {
-      return sessionStorage.getItem(SESSION_STORAGE_KEY) === SESSION_STORAGE_VALUE
-    } catch {
-      return false
-    }
-  })
+  const [wasSynced, setWasSynced] = useState<boolean>(isCalendarSynced())
   
   useEffect(() => {
     if (!isAuthenticated) return
@@ -39,8 +31,9 @@ export default function Sync({ children }: SyncProps) {
         }
 
         setDates(res.item)
-        sessionStorage.setItem(SESSION_STORAGE_KEY, SESSION_STORAGE_VALUE)
+        setCalendarSynced(true)
         setWasSynced(true)
+
       } catch (err) {
         const message = getErrorMessage(err)
         throw new Error(`Falied synchronization: ${message}`)
@@ -50,13 +43,7 @@ export default function Sync({ children }: SyncProps) {
     doSync()
   }, [isAuthenticated, wasSynced])
 
-  if (!wasSynced) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="font-sans text-foreground text-base">Synchronization...</p>
-      </div>
-    )
-  }
+  if (!wasSynced) return loadingMessage("Synchronization...")
 
   return (
     <SyncContext.Provider value={dates}>
