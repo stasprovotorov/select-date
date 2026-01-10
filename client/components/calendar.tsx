@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { cn, toStrIsoDate, parseIsoDate } from "@/lib/utils"
-import { sendDateBatchToApi, DateItem, DateOperation } from "@/lib/api-service"
+import { sendDateBatch, DateItem, DateOperation } from "@/lib/api-service"
 import { useDebounceBatch } from "@/app/api/hooks/use-debounce-batch"
 import { useSyncDates } from "./sync-context"
 
@@ -56,7 +56,7 @@ export default function Calendar() {
   const { dateBufferRef, bufferDateForSending, buildToRollback } = useDebounceBatch({
     delay: 700,
     maxBatchSize: 50,
-    dateBatchSender: sendDateBatchToApi,
+    dateBatchSender: sendDateBatch,
     clearBufferOnBeforeUnload: true
   })
 
