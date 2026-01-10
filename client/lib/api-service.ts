@@ -1,57 +1,71 @@
+import { getErrorMessage } from "./utils"
+
+const CLIENT_API_URL = process.env.NEXT_PUBLIC_CLIENT_API_URL ?? "/api/v1"
+
 export type DateItem = { calendarDate: string, colorBg: string, colorText: string }
 export type DateOperation = { operType: "insert" | "delete", item: DateItem }
-export type DateOperationResult = { ok: boolean, operation: DateOperation, message: string | null }
 export type DateBatchRequest = { batch: DateOperation[] }
-export type DateBatchResponse = { ok: boolean, results: DateOperationResult[], message: string | null }
-export type DatesByUser = { ok: boolean, items: DateItem[], message?: string }
 
-export async function sendDateBatchToApi(dateBatch: DateBatchRequest): Promise<DateBatchResponse> {
-  const bodyReq = JSON.stringify(dateBatch)
+export type DateOperationResult = 
+  | { ok: true, operation: DateOperation }
+  | { ok: false, operation: DateOperation, message: string }
+
+export type DateBatchResponse = 
+  | { ok: true, result: DateOperationResult[] }
+  | { ok: false, message: string }
+
+export async function sendDateBatch(dateBatch: DateBatchRequest): Promise<DateBatchResponse> {
+  const url = `${CLIENT_API_URL}/dates/batch`
+  const reqBody = JSON.stringify(dateBatch)
 
   try {
-    const response = await fetch("/api/v1/dates/batch", {
+    const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json"},
-      body: bodyReq,
+      headers: { "Content-Type": "application/json" },
+      body: reqBody,
       keepalive: true
     })
 
-    if (!response.ok) {
-      return { ok: false, results: [], message: `HTTP ${response.status}`}
+    if (!res.ok) {
+      return { ok: false, message: "The request to submit the batch of items with dates failed." }
     }
 
-    let bodyRes: DateBatchResponse
     try {
-      bodyRes = await response.json()
-    } catch {
-      return { ok: false, results: [], message: "Invalid JSON from server API"}
-    }
+      const resBody = await res.json()
 
-    return bodyRes
+      return resBody
+    } catch {
+      return { ok: false, message: "Failed to parse response body as JSON from the server." }
+    }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return { ok: false, results: [], message }
+    const message = getErrorMessage(err)
+    return { ok: false, message }
   }
 }
 
-export async function getDatesForUser(): Promise<DatesByUser> {
+export type DateByUserResponse = 
+  | { ok: true, item: DateItem[] }
+  | { ok: false, message: string }
+
+export async function getDateByUser(): Promise<DateByUserResponse> {
+  const url = `${CLIENT_API_URL}/users/me/dates`
+
   try {
-    const response = await fetch("/api/v1/dates/sync", { method: "GET" })
-    let body: DatesByUser
-
-    try {
-      body = await response.json()
-    } catch {
-      return { ok: false, items: [], message: "Invalid JSON from server API"}
-    }
-
-    if (!response.ok) {
-      return { ok: false, items: [], message: body.message }
+    const res = await fetch(url, { method: "GET" })
+    
+    if (!res.ok) {
+      return { ok: false, message: "Failed to retrieve the user's date items." }
     }
   
-    return body
+    try {
+      const body = await res.json()
+      return body
+    } catch {
+      return { ok: false, message: "Failed to parse response body as JSON from the server." }
+    }
+    
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    return { ok: false, items: [], message: message }
+    const message = getErrorMessage(err)
+    return { ok: false, message }
   }
 }
