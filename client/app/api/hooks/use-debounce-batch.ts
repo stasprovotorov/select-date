@@ -63,7 +63,7 @@ export function useDebounceBatch({
     // If the batch is empty (no useful data to send), skip sending a request to the server
     if (dateBatchRef.current.length === 0) {
       const message = "Batch is empty after building. Nothing to send to API."
-      apiResponse = { ok: true, results: [], message }
+      apiResponse = { ok: true, result: [] }
       return apiResponse
     }
 
@@ -148,7 +148,7 @@ export function useDebounceBatch({
         }
       } else {
         // Build the rollback array based on each item's API response
-        for (const dateOperRes of apiResponse.results) {
+        for (const dateOperRes of apiResponse.result) {
           if (!dateOperRes.ok) {
             const dateOper = dateOperRes.operation
             const dateItem = dateOper.item
