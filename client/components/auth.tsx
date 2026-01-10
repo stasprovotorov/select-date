@@ -14,15 +14,15 @@ export default function Auth({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("api/v1/auth/me", { credentials: "include" })
+        const res = await fetch("http://localhost:8000/api/v1/auth/me", { credentials: "include" })
         if (res.ok) {
           const user = await res.json()
           setAuthState({ isAuthenticated: true, user })
         } else {
-          window.location.href = SERVER_LOGIN_ENDPOINT
+          window.location.href = "http://localhost:8000/api/v1/auth/login"
         }
       } catch {
-        window.location.href = SERVER_LOGIN_ENDPOINT
+        window.location.href = "http://localhost:8000/api/v1/auth/login"
       } finally {
         setLoading(false)
       }
