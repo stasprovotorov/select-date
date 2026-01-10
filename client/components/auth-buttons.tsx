@@ -11,9 +11,16 @@ export default function SignOutButton(): JSX.Element {
 
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("isCalendarSynced", "false")
+      sessionStorage.setItem("calendar-app:is-synced", "false")
     }
-  window.location.href = "/auth/logout"
+
+    const res = await fetch("/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "include"
+    })
+    
+    const { redirectTo } = await res.json() 
+    window.location.href = redirectTo
   }
 
   return (
