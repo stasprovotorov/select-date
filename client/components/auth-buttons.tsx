@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { setCalendarSynced } from "@/lib/storage"
 
 export default function SignOutButton(): JSX.Element {
   const base = "absolute right-4"
@@ -10,9 +11,7 @@ export default function SignOutButton(): JSX.Element {
   const focus = "focus:!ring-2 focus:!ring-offset-2 focus:!ring-gray-200"
 
   const handleSignOut = async () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("calendar-app:is-synced", "false")
-    }
+    setCalendarSynced(false)
 
     const res = await fetch("/api/v1/auth/logout", {
       method: "POST",
