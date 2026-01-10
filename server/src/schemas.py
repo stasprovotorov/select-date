@@ -36,7 +36,7 @@ class DatesByUserSchema(BaseModel):
         ...,
         description="True if the fetch dates by user succeeded, False otherwise."
     )
-    items: list[DateItemSchema] = Field(
+    item: list[DateItemSchema] = Field(
         default=[],
         description="List of dates for the user (empty list if none)."
     )
@@ -90,7 +90,7 @@ class DateBatchResponseSchema(BaseModel):
         ...,
         description="True if the HTTP request succeeded (received a 2xx response), False otherwise."
     )
-    results: Optional[list[DateOperationResultSchema]] = Field(
+    result: Optional[list[DateOperationResultSchema]] = Field(
         default=None,
         description="List of results for individual date operations."
     )
