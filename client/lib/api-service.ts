@@ -72,7 +72,7 @@ export async function getDateByUser(): Promise<DateByUserResponse> {
 
 type isUserResponse = 
   | { ok: true }
-  | { ok: false, message: string}
+  | { ok: false, message: string }
 
 export async function isUserAuthenticated(): Promise<isUserResponse> {
   const url = `${CLIENT_API_URL}/auth/me`
