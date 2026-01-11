@@ -2,41 +2,43 @@
 
 import { useEffect, useState } from "react"
 import { AuthContext, type AuthState } from "./auth-context"
+import { isUserAuthenticated } from "@/lib/api-service"
+import loadingMessage from "./ui/loading-message"
 
-const CLIENT_URL = process.env.CLIENT_URL || ""
-const SERVER_URL = process.env.SERVER_URL || ""
-const SERVER_LOGIN_ENDPOINT = `${SERVER_URL}/api/v1/auth/login`
+const SERVER_API_URL = process.env.SERVER_API_URL ?? "http://localhost:8000/api/v1"
 
 export default function Auth({ children }: { children: React.ReactNode }) {
-  const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false, user: null})
-  const [isLoading, setLoading] = useState(true)
+  const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false })
+  const [isLoading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
-    (async () => {
+    let mounted = true
+
+    async function doAuth() {
       try {
-        const res = await fetch("http://localhost:8000/api/v1/auth/me", { credentials: "include" })
+        const res = await isUserAuthenticated()
+
+        if (!mounted) return
+
         if (res.ok) {
-          const user = await res.json()
-          setAuthState({ isAuthenticated: true, user })
+          setAuthState({ isAuthenticated: true })
         } else {
-          window.location.href = "http://localhost:8000/api/v1/auth/login"
+          window.location.replace(`${SERVER_API_URL}/auth/login`)
         }
+
       } catch {
-        window.location.href = "http://localhost:8000/api/v1/auth/login"
+        window.location.replace(`${SERVER_API_URL}/auth/login`)
       } finally {
-        setLoading(false)
+        if (mounted) setLoading(false)
       }
-    })()
+    }
+
+    doAuth()
+
+    return () => { mounted = false }
   }, [])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        Authorization...
-      </div>
-    )
-  }
-
+  if (isLoading) return loadingMessage("Authorization...")
   if (!authState.isAuthenticated) return null 
 
   return (
