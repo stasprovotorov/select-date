@@ -69,3 +69,25 @@ export async function getDateByUser(): Promise<DateByUserResponse> {
     return { ok: false, message }
   }
 }
+
+type isUserResponse = 
+  | { ok: true }
+  | { ok: false, message: string}
+
+export async function isUserAuthenticated(): Promise<isUserResponse> {
+  const url = `${CLIENT_API_URL}/auth/me`
+
+  try {
+    const res = await fetch(url, { credentials: "include" })
+
+    if (res.ok) {
+      return { ok: true }
+    } else {
+      return { ok: false, message: "User is not authenticated." }
+    }
+
+  } catch (err) {
+    const message = getErrorMessage(err)
+    return { ok: false, message }
+  }
+}
