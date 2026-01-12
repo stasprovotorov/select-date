@@ -167,5 +167,5 @@ export function useDebounce({ delay, maxBatchSize, clearBufferOnBeforeUnload, ba
     }
   }, [clearBufferOnBeforeUnload, clearTimer])
 
-  return { dateBufferRef: bufferRef, bufferDateAndSend, buildToRollback }
+  return { bufferRef, bufferDateAndSend, buildToRollback }
 }
