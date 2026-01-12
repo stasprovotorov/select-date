@@ -11,7 +11,7 @@ export type DateOperationResult =
   | { ok: false, operation: DateOperation, message: string }
 
 export type DateBatchResponse = 
-  | { ok: true, result: DateOperationResult[] }
+  | { ok: true, result: DateOperationResult[], message?: string }
   | { ok: false, message: string }
 
 export async function sendDateBatch(dateBatch: DateBatchRequest): Promise<DateBatchResponse> {
