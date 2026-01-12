@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { cn, toStrIsoDate, parseIsoDate } from "@/lib/utils"
+import { cn, toStrIsoDate, parseIsoDate, getErrorMessage } from "@/lib/utils"
 import { sendDateBatch, DateItem, DateOperation } from "@/lib/api-service"
-import { useDebounceBatch } from "@/app/api/hooks/use-debounce-batch"
+import { useDebounce } from "@/app/api/hooks/use-debounce-batch"
 import { useSyncDates } from "./sync-context"
 
 const LOCAL_STORAGE_KEY = "calendar-selected-dates"
@@ -52,11 +52,10 @@ export default function Calendar() {
   const prevSelectedDatesRef = useRef<SelectedDate[]>([])
   const serverDates = useSyncDates()
 
-  // Initialize debounce batch hook to buffer date changes and send them to the API 
-  const { dateBufferRef, bufferDateForSending, buildToRollback } = useDebounceBatch({
+  const { bufferRef, bufferDateAndSend, buildToRollback } = useDebounce({
     delay: 700,
     maxBatchSize: 50,
-    dateBatchSender: sendDateBatch,
+    batchSender: sendDateBatch,
     clearBufferOnBeforeUnload: true
   })
 
@@ -89,7 +88,8 @@ export default function Calendar() {
           setSelectedDates(dates)
         }
       } catch (err) {
-        console.error("Error loading dates from localStorage:", err)
+        const message = getErrorMessage(err)
+        console.error(`Failed to load dates from localStorage: ${message}`)
       }
     }
     loadDatesFromStorage()
@@ -98,14 +98,15 @@ export default function Calendar() {
   const saveDatesToStorage = (dates: SelectedDate[]) => {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dates))
-    } catch (error) {
-      console.error("Error saving dates to localStorage:", error)
+    } catch (err) {
+      const message = getErrorMessage(err)
+      console.error(`Failed to save dates to localStorage: ${message}`)
     }
   }
 
   const toggleDate = async (month: number, day: number) => {
-    // If is not bufferind, freeze previous state of Сalendar
-    const isBuffering = Boolean(dateBufferRef?.current && dateBufferRef.current.size > 0)
+    const isBuffering = Boolean(bufferRef?.current && bufferRef.current.size > 0)
+    
     if (!isBuffering) {
       prevSelectedDatesRef.current = [...selectedDates]
     }
@@ -118,7 +119,6 @@ export default function Calendar() {
       colorText: selectedColor.textColor,
     }
 
-    // Find index of the newDate in selectedDates, or -1 if not found
     const existingDateIndex = selectedDates.findIndex(
       (date) => date.year === currentYear && date.monthIndex === month && date.day === day
     )
@@ -126,7 +126,6 @@ export default function Calendar() {
     let newSelectedDates: SelectedDate[]
     let operType: "insert" | "delete"
 
-    // Determine operation type for newDate and construct updated selectedDates as newSelectedDates
     if (existingDateIndex >= 0) {
       operType = "delete"
       newSelectedDates = selectedDates.filter((_, index) => index !== existingDateIndex)
@@ -135,7 +134,6 @@ export default function Calendar() {
       newSelectedDates = [...selectedDates, newDate]
     }
 
-    // Provide optimistic updates for the user
     setSelectedDates(newSelectedDates)
     saveDatesToStorage(newSelectedDates)
 
@@ -146,20 +144,14 @@ export default function Calendar() {
     }
 
     const dateOper: DateOperation = { operType, item: dateItem }
-
-    // Buffer the new date for sending to the API when the debounce timer expires
-    const apiDateResults = await bufferDateForSending(dateOper)
-    
-    // Build an array of dates to rollback based on negative API responses
+    const apiDateResults = await bufferDateAndSend(dateOper)
     const toRollbackDates = buildToRollback(apiDateResults)
 
-    // Rollback optimistic updates if toRollbackDates is not empty
     if (toRollbackDates.length !== 0) {
       let rollbackSelectedDates: SelectedDate[] = []
       const toAddDates: SelectedDate[] = []
       const toRemoveDatesIndex = new Set()
 
-      // Group dates by action to determine rollback operations
       for (const { operType, selectedDate } of toRollbackDates) {
         if (operType === "insert") {
           toRemoveDatesIndex.add(selectedDates.findIndex(
@@ -173,12 +165,9 @@ export default function Calendar() {
         }
       }
 
-      // Build updated selectedDates by removing dates marked for rollback (failed "select" actions)
       rollbackSelectedDates = prevSelectedDatesRef.current.filter((_, index) => !toRemoveDatesIndex.has(index))
-      // Re-add dates that failed to be removed on the server (rollback failed "deselect" actions)
       rollbackSelectedDates.push(...toAddDates)
 
-      // Apply rollback
       setSelectedDates(rollbackSelectedDates)
       saveDatesToStorage(rollbackSelectedDates) 
     }
