@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Body
-from src.app.calendar.schemas import DatesByUserSchema, DateBatchResponseSchema, DateBatchRequestSchema
 from src.app.auth.dependencies import require_auth
+from src.app.calendar.schemas import DatesByUserSchema, DateBatchResponseSchema, DateBatchRequestSchema
 from src.app.calendar.dependencies import get_sqlalchemy_repository
 from src.app.calendar.service import CalendarService
 
