@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     SESSION_TTL: int
 
+    DB_URL: str
+
     AUTH0_DOMAIN: HttpUrl
     AUTH0_JWKS_PATH: str = Field(pattern=PATH_REGEX_PATTERN)
     AUTH0_TOKEN_PATH: str = Field(pattern=PATH_REGEX_PATTERN)
