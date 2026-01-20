@@ -1,7 +1,7 @@
 import time
 import secrets
 from functools import lru_cache
-from app.config import settings as global_settings
+from src.app.config import settings as global_settings
 
 
 class Session:

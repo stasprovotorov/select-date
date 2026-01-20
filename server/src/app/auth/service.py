@@ -1,7 +1,7 @@
 import jwt
 from jwt.algorithms import RSAAlgorithm
-from app.auth.config import settings as auth_settings
-from app.auth.exceptions import TokenValidationError
+from src.app.auth.config import settings as auth_settings
+from src.app.auth.exceptions import TokenValidationError
 
 
 def validate_jwt(token: str, jwks: set) -> dict:

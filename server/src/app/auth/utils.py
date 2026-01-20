@@ -1,6 +1,6 @@
 from urllib.parse import urlencode
-from app.config import settings as global_settings
-from app.auth.config import settings as auth_settings
+from src.app.config import settings as global_settings
+from src.app.auth.config import settings as auth_settings
 
 
 def build_login_uri(auth_state: str) -> str:

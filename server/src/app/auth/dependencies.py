@@ -1,9 +1,9 @@
 import secrets
 from fastapi import Depends, Query, Cookie
-from sessions import SessionService, get_session_service
-from exceptions import UserNotAuthorized, AuthStatesNotMatched
-from app.auth.client import fetch_jwks, fetch_token
-from app.auth.service import validate_jwt
+from src.app.auth.sessions import SessionService, get_session_service
+from src.app.auth.exceptions import UserNotAuthorized, AuthStatesNotMatched
+from src.app.auth.client import fetch_jwks, fetch_token
+from src.app.auth.service import validate_jwt
 
 
 async def require_auth(session_id: str, session_service: SessionService = Depends(get_session_service)) -> dict:

@@ -3,8 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.app.database import async_db
 from src.app.config import settings as global_settings
-from src.app.auth import router as auth_router
-from src.app.calendar import router as calendar_router
+from src.app.auth.router import router as auth_router
+from src.app.calendar.router import router as calendar_router
 
 
 @asynccontextmanager

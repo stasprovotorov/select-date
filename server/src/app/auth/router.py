@@ -1,10 +1,10 @@
 import secrets
 from fastapi import APIRouter, Depends, Cookie
 from fastapi.responses import RedirectResponse
-from app.config import settings as global_settings
-from app.auth.sessions import SessionService, get_session_service
-from app.auth.dependencies import require_auth, validate_state, get_authorized_user
-from app.auth.utils import build_login_uri, build_logout_uri
+from src.app.config import settings as global_settings
+from src.app.auth.sessions import SessionService, get_session_service
+from src.app.auth.dependencies import require_auth, validate_state, get_authorized_user
+from src.app.auth.utils import build_login_uri, build_logout_uri
 
 
 router = APIRouter(prefix="/api/v1/auth")

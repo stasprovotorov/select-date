@@ -1,8 +1,8 @@
 from aiohttp import TCPConnector, ClientSession, ClientError
-from exceptions import AuthTokenError
-from app.config import Environment
-from app.config import settings as global_settings
-from app.auth.config import settings as auth_settings
+from src.app.auth.exceptions import AuthTokenError
+from src.app.config import Environment
+from src.app.config import settings as global_settings
+from src.app.auth.config import settings as auth_settings
 
 
 async def fetch_token(code: str) -> dict:
