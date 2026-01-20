@@ -18,6 +18,10 @@ class Settings(BaseSettings):
 
     APP_BACKEND_BASE_URL: HttpUrl
     APP_BACKEND_API_PATH: str = Field(pattern=PATH_REGEX_PATTERN)
+    APP_BACKEND_ALLOW_CREDENTIALS: bool
+    APP_BACKEND_ALLOW_METHODS: str
+    APP_BACKEND_ALLOW_HEADERS: str
+
     APP_FRONTEND_BASE_URL: HttpUrl
 
     SESSION_TTL: int
