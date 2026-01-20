@@ -17,5 +17,9 @@ class AsyncDatabase:
             await connection.run_sync(Base.metadata.drop_all)
             await connection.run_sync(Base.metadata.create_all)
 
+    async def shutdown_async_database(self):
+        async with self.async_engine.begin() as connection:
+            await connection.execute(text("PRAGMA wal_checkpoint(FULL)"))
+
 
 async_db: AsyncDatabase = AsyncDatabase()
