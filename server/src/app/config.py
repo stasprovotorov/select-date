@@ -22,7 +22,8 @@ class Settings(BaseSettings):
 
     SESSION_TTL: int
 
-    DB_URL: str
+    DB_SQLITE_URL: str
+    DB_SQLITE_JOURNAL_MODE: str
 
     AUTH0_DOMAIN: HttpUrl
     AUTH0_JWKS_PATH: str = Field(pattern=PATH_REGEX_PATTERN)
