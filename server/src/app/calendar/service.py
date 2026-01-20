@@ -7,10 +7,10 @@ class CalendarService:
         self.repository = repository
 
     async def procces_dates(self, user_id: str, dates: list[DateOperationSchema]) -> DateOperationResultSchema:
-        result = await self.repository(user_id, dates)
+        result = await self.repository.process_batch(user_id, dates)
         return result
     
     async def get_dates_by_user(self, user_id: str) -> list[DateItemSchema]:
-        result = await self.repository(user_id)
+        result = await self.repository.get_dates_by_user(user_id)
         return result
     
