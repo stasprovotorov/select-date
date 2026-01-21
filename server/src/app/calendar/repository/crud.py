@@ -60,7 +60,7 @@ class SqlAlchemyCalendarRepository(CalendarRepository):
     async def get_dates_by_user(self, user_id: str) -> list[DateItemSchema]:
         dates = []
 
-        async with self.async_session() as session:
+        async with self.async_session as session:
             try:
                 statement = select(SelectedDateModel).where(SelectedDateModel.user_id == user_id)
                 execution_result = await session.execute(statement)

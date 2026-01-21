@@ -7,7 +7,7 @@ from src.app.calendar.service import CalendarService
 router = APIRouter(prefix="/api/v1")
 
 
-@router.get("/user/me/dates", response_model=DatesByUserSchema)
+@router.get("/users/me/dates", response_model=DatesByUserSchema)
 async def get_dates_by_user(
     user: dict = Depends(require_auth),
     repository = Depends(get_sqlalchemy_repository)
@@ -22,7 +22,7 @@ async def get_dates_by_user(
     return DatesByUserSchema(ok=True, item=dates_by_user)
 
 
-@router.post("/dates/bacth", response_model=DateBatchResponseSchema)
+@router.post("/dates/batch", response_model=DateBatchResponseSchema)
 async def process_date_batch(
     user: dict = Depends(require_auth),
     payload: DateBatchRequestSchema = Body(...),

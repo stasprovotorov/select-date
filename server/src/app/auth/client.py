@@ -13,9 +13,9 @@ async def fetch_token(code: str) -> dict:
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
     request_body = {
-        "code": code,
         "client_id": auth_settings.CLIENT_ID,
-        "client_secret": auth_settings.CLIENT_SECRET,
+        "client_secret": auth_settings.CLIENT_SECRET.get_secret_value(),
+        "code": code,
         "redirect_uri": auth_settings.REDIRECT_URI,
         "grant_type": "authorization_code"
     }
@@ -24,7 +24,7 @@ async def fetch_token(code: str) -> dict:
         async with ClientSession(connector=connector) as session:
             async with session.post(auth_settings.TOKEN_URL, headers=headers, data=request_body) as response:
                 if response.status != 200:
-                    raise AuthTokenError(401, f"Failed to fetch token from Auth0. HTTP code: {response.status}.")
+                    raise AuthTokenError(f"Failed to fetch token from Auth0. HTTP code: {response.status}.")
 
                 try:
                     response_body = await response.json()

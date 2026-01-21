@@ -13,7 +13,7 @@ def validate_jwt(token: str, jwks: set) -> dict:
     if not kid:
         TokenValidationError("The key 'kid' was not found in the token's header.")
 
-    for jwk in jwks:
+    for jwk in jwks["keys"]:
         if kid == jwk["kid"]:
             try:
                 public_key = RSAAlgorithm.from_jwk(jwk)
@@ -29,7 +29,7 @@ def validate_jwt(token: str, jwks: set) -> dict:
             key=public_key,
             algorithms=auth_settings.ALGORITHM,
             audience=auth_settings.CLIENT_ID,
-            issuer=auth_settings.DOMAIN,
+            issuer=auth_settings.DOMAIN.encoded_string(),
             leeway=5
         )
         return payload

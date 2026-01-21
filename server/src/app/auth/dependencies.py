@@ -6,7 +6,10 @@ from src.app.auth.client import fetch_jwks, fetch_token
 from src.app.auth.service import validate_jwt
 
 
-async def require_auth(session_id: str, session_service: SessionService = Depends(get_session_service)) -> dict:
+async def require_auth(
+    session_id: str | None = Cookie(None), 
+    session_service: SessionService = Depends(get_session_service)
+) -> dict:
     session = session_service.get_session(session_id)
     if not session:
         raise UserNotAuthorized()
