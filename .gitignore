@@ -30,6 +30,6 @@
 __pycache__/
 /server/.venv
 /server/.env
-/server/src/database.db
-/server/src/database.db-shm
-/server/src/database.db-wal
+/server/database.db
+/server/database.db-shm
+/server/database.db-wal
