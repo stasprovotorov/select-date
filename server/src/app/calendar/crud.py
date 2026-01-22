@@ -1,13 +1,12 @@
 from sqlalchemy import select, insert, delete
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from src.app.calendar.repository.base import CalendarRepository
 from src.app.calendar.schemas import DateOperationSchema, DateOperationResultSchema, DateOperationType, DateItemSchema
 from src.app.calendar.models import SelectedDateModel
 from src.app.calendar.exceptions import DatabaseError
 
 
-class SqlAlchemyCalendarRepository(CalendarRepository):
+class SqlAlchemyCalendarRepository:
     def __init__(self, async_session: AsyncSession):
         self.async_session = async_session
 
