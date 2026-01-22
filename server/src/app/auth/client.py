@@ -1,7 +1,7 @@
 from aiohttp import TCPConnector, ClientSession, ClientError
 from src.app.auth.exceptions import AuthTokenError
-from src.app.config import Environment
-from src.app.config import settings as global_settings
+from src.app.core.config import Environment
+from src.app.core.config import settings as global_settings
 from src.app.auth.config import settings as auth_settings
 
 

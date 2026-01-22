@@ -1,5 +1,5 @@
-from src.app.calendar.repository.crud import SqlAlchemyCalendarRepository
-from src.app.database import async_db
+from src.app.calendar.repository import SqlAlchemyCalendarRepository
+from src.app.core.database import async_db
 
 
 async def get_sqlalchemy_repository() -> SqlAlchemyCalendarRepository:

@@ -1,10 +1,9 @@
 from enum import Enum
-from functools import lru_cache
 from pathlib import Path
 from pydantic import HttpUrl, SecretStr, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BACKEND_ROOT_DIRECTORY: Path = Path(__file__).parent.parent.parent.resolve()
+BACKEND_ROOT_DIRECTORY: Path = Path(__file__).parent.parent.parent.parent.resolve()
 PATH_REGEX_PATTERN = r"^(/[0-9A-Za-z._-]+)+"
 
 

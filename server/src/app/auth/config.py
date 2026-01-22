@@ -1,6 +1,6 @@
 from urllib.parse import urljoin
 from pydantic import BaseModel, HttpUrl, SecretStr
-from src.app.config import settings as global_settings
+from src.app.core.config import settings as global_settings
 
 
 class Settings(BaseModel):

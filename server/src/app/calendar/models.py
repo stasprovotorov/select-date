@@ -1,7 +1,7 @@
 from datetime import date
 from sqlalchemy import String, Date
 from sqlalchemy.orm import Mapped, mapped_column
-from src.app.models import Base
+from src.app.core.models import Base
 
 
 class SelectedDateModel(Base):

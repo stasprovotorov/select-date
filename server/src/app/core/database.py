@@ -1,6 +1,6 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from src.app.config import settings as global_settings
+from src.app.core.config import settings as global_settings
 from src.app.calendar.models import Base
 
 

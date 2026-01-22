@@ -1,9 +1,9 @@
-from src.app.calendar.repository.base import CalendarRepository
+from src.app.calendar.repository import SqlAlchemyCalendarRepository
 from src.app.calendar.schemas import DateOperationSchema, DateOperationResultSchema, DateItemSchema
 
 
 class CalendarService:
-    def __init__(self, repository: CalendarRepository) -> None:
+    def __init__(self, repository: SqlAlchemyCalendarRepository) -> None:
         self.repository = repository
 
     async def procces_dates(self, user_id: str, dates: list[DateOperationSchema]) -> DateOperationResultSchema:
