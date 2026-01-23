@@ -63,7 +63,7 @@ export default function Calendar() {
     const loadDatesFromStorage = () => {
       let storedDates: SelectedDate[] = []
 
-      if (serverDates?.length) {
+      if (serverDates !== null) {
         for (const serverDate of serverDates) {
           const { year, month, day } = parseIsoDate(serverDate.calendarDate)
 
