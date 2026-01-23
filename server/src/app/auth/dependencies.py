@@ -10,10 +10,10 @@ async def require_auth(
     session_id: str | None = Cookie(None), 
     session_service: SessionService = Depends(get_session_service)
 ) -> dict:
-    session = session_service.get_session(session_id)
+    session = await session_service.get_session(session_id)
     if not session:
         raise UserNotAuthorized()
-    return session.user
+    return session["user"]
 
 
 async def validate_state(state: str | None = Query(None), auth_state: str | None = Cookie(None)) -> None:

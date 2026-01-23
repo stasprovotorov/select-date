@@ -38,7 +38,7 @@ async def login_callback(
     user: dict = Depends(get_authorized_user),
     session: SessionService = Depends(get_session_service)
 ) -> RedirectResponse:
-    session_id = session.create_session(user)
+    session_id =  await session.create_session(user)
 
     response = RedirectResponse(
         url=global_settings.APP_FRONTEND_BASE_URL, 
@@ -64,8 +64,6 @@ async def logout(
     session_id: str | None = Cookie(None),
     session: SessionService = Depends(get_session_service)
 ) -> dict:
-    print("Before:", session.store)
-    session.remove_session(session_id)
-    print("After:", session.store)
+    await session.remove_session(session_id)
     url = build_logout_uri()
     return {"redirectTo": url}
