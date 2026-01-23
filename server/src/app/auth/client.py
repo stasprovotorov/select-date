@@ -1,8 +1,10 @@
+import json
 from aiohttp import TCPConnector, ClientSession, ClientError
 from src.app.auth.exceptions import AuthTokenError
 from src.app.core.config import Environment
 from src.app.core.config import settings as global_settings
 from src.app.auth.config import settings as auth_settings
+from src.app.core.redis import client as redis_client
 
 
 async def fetch_token(code: str) -> dict:
@@ -43,6 +45,11 @@ async def fetch_token(code: str) -> dict:
 
 
 async def fetch_jwks() -> dict:
+    jwks = await redis_client.get("jwks")
+
+    if jwks:
+        return json.loads(jwks)
+
     connector = None
     if global_settings.ENVIRONMENT == Environment.DEVELOPMENT:
         connector = TCPConnector(ssl=False)
@@ -55,6 +62,7 @@ async def fetch_jwks() -> dict:
                 
                 try:
                     jwks = await response.json(content_type=None)
+                    await redis_client.set("jwks", json.dumps(jwks, ensure_ascii=False), ex=300)
                     return jwks
                 except Exception as err:
                     AuthTokenError(401, f"Failed to parse response as JSON. Error message: {err}")
