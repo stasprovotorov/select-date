@@ -118,7 +118,7 @@ export function useDebounce({ delay, maxBatchSize, clearBufferOnBeforeUnload, ba
 
           const toRollbackItem: SelectedDate = {
             year: year,
-            monthIndex: month,
+            monthIndex: month - 1,
             day: day,
             colorBg: dateItem.colorBg,
             colorText: dateItem.colorText
@@ -135,7 +135,7 @@ export function useDebounce({ delay, maxBatchSize, clearBufferOnBeforeUnload, ba
 
             const toRollbackItem: SelectedDate = {
               year: year,
-              monthIndex: month,
+              monthIndex: month - 1,
               day: day,
               colorBg: dateItem.colorBg,
               colorText: dateItem.colorText
