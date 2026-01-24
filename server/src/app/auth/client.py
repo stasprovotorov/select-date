@@ -45,10 +45,11 @@ async def fetch_token(code: str) -> dict:
 
 
 async def fetch_jwks() -> dict:
-    jwks = await redis_client.get("jwks")
+    jwks_from_redis = await redis_client.get(global_settings.DB_REDIS_KEY_JWKS)
 
-    if jwks:
-        return json.loads(jwks)
+    if jwks_from_redis:
+        jwks_dict = json.loads(jwks_from_redis)
+        return jwks_dict
 
     connector = None
     if global_settings.ENVIRONMENT == Environment.DEVELOPMENT:
@@ -61,9 +62,16 @@ async def fetch_jwks() -> dict:
                     raise AuthTokenError(401, f"Failed to obtain JWKS from Auth0: HTTP {response.status}")
                 
                 try:
-                    jwks = await response.json(content_type=None)
-                    await redis_client.set("jwks", json.dumps(jwks, ensure_ascii=False), ex=300)
-                    return jwks
+                    jwks_dict = await response.json(content_type=None)
+                    jwks_json_str = json.dumps(jwks_dict, ensure_ascii=False)
+
+                    await redis_client.set(
+                        name=global_settings.DB_REDIS_KEY_JWKS, 
+                        value=jwks_json_str, 
+                        ex=global_settings.DB_REDIS_TTL_JWKS
+                    )
+
+                    return jwks_dict
                 except Exception as err:
                     AuthTokenError(401, f"Failed to parse response as JSON. Error message: {err}")
 

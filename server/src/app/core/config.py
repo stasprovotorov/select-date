@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     DB_SQLITE_URL: str
     DB_SQLITE_JOURNAL_MODE: str
 
+    DB_REDIS_HOST: str
+    DB_REDIS_PORT: int
+    DB_REDIS_DECODE_RESPONSES: bool
+    DB_REDIS_KEY_PREFIX_SESSION: str
+    DB_REDIS_KEY_JWKS: str
+    DB_REDIS_TTL_JWKS: int
+
     AUTH0_DOMAIN: HttpUrl
     AUTH0_JWKS_PATH: str = Field(pattern=PATH_REGEX_PATTERN)
     AUTH0_TOKEN_PATH: str = Field(pattern=PATH_REGEX_PATTERN)
