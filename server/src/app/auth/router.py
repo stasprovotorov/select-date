@@ -2,8 +2,8 @@ import secrets
 from fastapi import APIRouter, Depends, Cookie
 from fastapi.responses import RedirectResponse
 from src.app.core.config import settings as global_settings
-from src.app.auth.sessions import SessionService, get_session_service
-from src.app.auth.dependencies import require_auth, validate_state, get_authorized_user
+from src.app.auth.sessions import SessionService
+from src.app.auth.dependencies import require_auth, validate_state, get_authorized_user, get_session_service
 from src.app.auth.utils import build_login_uri, build_logout_uri
 
 
