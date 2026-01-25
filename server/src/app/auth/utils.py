@@ -1,3 +1,4 @@
+import secrets
 from urllib.parse import urlencode
 from src.app.core.config import settings as global_settings
 from src.app.auth.config import settings as auth_settings
@@ -22,3 +23,12 @@ def build_logout_uri() -> str:
         "returnTo": global_settings.APP_FRONTEND_BASE_URL
     }
     return f"{auth_settings.LOGOUT_URL}?{urlencode(query_parameters)}"
+
+
+def get_session_id() -> str:
+    session_id = secrets.token_urlsafe(32)
+    return session_id
+
+
+def get_session_key(session_id: str) -> str:
+    return f"{global_settings.DB_REDIS_KEY_PREFIX_SESSION}:{session_id}"
