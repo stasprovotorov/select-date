@@ -1,42 +1,43 @@
-import time
+from typing import TYPE_CHECKING
 import json
-import secrets
-from functools import lru_cache
-from redis.asyncio import Redis
-from src.app.core.config import settings as global_settings
+
+from src.app.auth.schemas import Session
+from src.app.auth.utils import get_session_id, get_session_key
+from src.app.core.config import settings
 from src.app.core.redis import client as redis_client
+
+if TYPE_CHECKING:
+    from redis import Redis
 
 
 class SessionService:
-    def __init__(self, storage: Redis) -> None:
+    def __init__(self, storage: "Redis") -> None:
         self.storage = storage
 
     async def create_session(self, user: dict) -> str:
-        session_id = secrets.token_urlsafe(32)
-        storage_key = f"session:{session_id}"
-        storage_value = {
-            "user": user,
-            "created_at": int(time.time()),
-            "expires_at": int(time.time()) + global_settings.SESSION_TTL
-        }
+        session_id = get_session_id()
+        session_key = get_session_key(session_id)
+        session = Session(user=user)
+
         await self.storage.set(
-            storage_key,
-            json.dumps(storage_value, ensure_ascii=False),
-            ex=global_settings.SESSION_TTL
+            name=session_key,
+            value=session.model_dump_json(),
+            ex=settings.SESSION_TTL
         )
+
         return session_id
 
     async def get_session(self, session_id: str) -> dict | None:
-        session = await self.storage.get(f"session:{session_id}")
+        session_key = get_session_key(session_id)
+        session = await self.storage.get(session_key)
+
         if session:
-            return json.loads(session)
-        return None
+            session_dict = json.loads(session)
+            return session_dict
     
     async def remove_session(self, session_id: str) -> None:
-        session = await self.storage.delete(f"session:{session_id}")
-        return session
+        session_key = get_session_key(session_id)
+        await self.storage.delete(session_key)
 
 
-@lru_cache
-def get_session_service() -> SessionService:
-    return SessionService(storage=redis_client)
+session_service = SessionService(redis_client)
