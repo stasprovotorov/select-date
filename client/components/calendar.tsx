@@ -51,6 +51,7 @@ export default function Calendar() {
   const [selectedColor, setSelectedColor] = useState(colorOptions[0])
   const prevSelectedDatesRef = useRef<SelectedDate[]>([])
   const serverDates = useSyncDates()
+  const isBuffering = useRef<Boolean>(false)
 
   const { bufferRef, bufferDateAndSend, buildToRollback } = useDebounce({
     delay: 700,
@@ -105,10 +106,9 @@ export default function Calendar() {
   }
 
   const toggleDate = async (month: number, day: number) => {
-    const isBuffering = Boolean(bufferRef?.current && bufferRef.current.size > 0)
-    
-    if (!isBuffering) {
+    if (!isBuffering.current) {
       prevSelectedDatesRef.current = [...selectedDates]
+      isBuffering.current = true
     }
     
     const newDate: SelectedDate = {
@@ -171,6 +171,7 @@ export default function Calendar() {
       setSelectedDates(rollbackSelectedDates)
       saveDatesToStorage(rollbackSelectedDates) 
     }
+    isBuffering.current = false
   }
 
   const getDaysInMonth = (month: number, year: number) => {
