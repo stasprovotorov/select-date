@@ -59,6 +59,11 @@ class AuthSessionDeleteError(AuthSessionError):
         super().__init__("Failed to remove session object from the server.")
 
 
+class AuthSessionNotFoundError(AuthSessionError):
+    def __init__(self):
+        super().__init__("Session was not found in the server.")
+
+
 class AuthSessionDeserializationError(AuthSessionError):
     def __init__(self):
         super().__init__("Failed to deserialize session object from the server.")
