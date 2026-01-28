@@ -9,7 +9,8 @@ from src.app.auth.utils import get_session_id, get_session_key
 from src.app.auth.exceptions import (
     AuthSessionGetError, 
     AuthSessionSetError,
-    AuthSessionDeleteError, 
+    AuthSessionDeleteError,
+    AuthSessionNotFoundError, 
     AuthSessionDeserializationError
 )
 
@@ -40,6 +41,10 @@ class SessionService:
 
         try:
             session = await self.storage.get(session_key)
+
+            if not session:
+                raise AuthSessionNotFoundError
+            
             session_dict = json.loads(session)
             return session_dict
         except redis.ConnectionError as error:
@@ -48,6 +53,9 @@ class SessionService:
         except json.JSONDecodeError as error:
             # Log it.
             raise AuthSessionDeserializationError from error
+        except AuthSessionNotFoundError as error:
+            # Log it.
+            raise
     
     async def remove_session(self, session_id: str) -> None:
         session_key = get_session_key(session_id)
