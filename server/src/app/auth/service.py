@@ -1,27 +1,49 @@
 import jwt
 from jwt.algorithms import RSAAlgorithm
+from jwt.exceptions import (
+    DecodeError, 
+    InvalidKeyError, 
+    InvalidAlgorithmError, 
+    InvalidAudienceError, 
+    InvalidIssuerError
+)
+
 from src.app.auth.config import settings as auth_settings
-from src.app.auth.exceptions import TokenValidationError
+from src.app.auth.exceptions import (
+    AuthTokenKidNotFoundError, 
+    AuthTokenPublicKeyError, 
+    AuthTokenJwkNotFoundError, 
+    AuthTokenJwtDecodeError
+)
 
 
-def validate_jwt(token: str, jwks: set) -> dict:
+def validate_jwt(token: str, jwks: dict) -> dict:
     public_key = None
 
     unverified_header = jwt.get_unverified_header(token)
-    kid = unverified_header.get("kid")
+    kid_jwt = unverified_header.get("kid")
 
-    if not kid:
-        TokenValidationError("The key 'kid' was not found in the token's header.")
+    if not kid_jwt:
+        # Log it.
+        raise AuthTokenKidNotFoundError
+    
+    keys = jwks.get("keys")
 
-    for jwk in jwks["keys"]:
-        if kid == jwk["kid"]:
-            try:
-                public_key = RSAAlgorithm.from_jwk(jwk)
-            except Exception as err:
-                TokenValidationError(str(err))
+    if keys:
+        for jwk in keys:
+            kid_jwk = jwk.get("kid")
 
-    if not public_key:
-        TokenValidationError("No JWK was found for the given 'kid'.")
+            if kid_jwt == kid_jwk:
+                try:
+                    public_key = RSAAlgorithm.from_jwk(jwk)
+                    # Log it.
+                except InvalidKeyError as error:
+                    # Log it.
+                    raise AuthTokenPublicKeyError from error
+
+    if not keys or not public_key:
+        # Log it.
+        raise AuthTokenJwkNotFoundError
 
     try:
         payload = jwt.decode(
@@ -32,7 +54,8 @@ def validate_jwt(token: str, jwks: set) -> dict:
             issuer=auth_settings.DOMAIN.encoded_string(),
             leeway=5
         )
+        # Log it.
         return payload
-    except Exception as err:
-        raise TokenValidationError(str(err))
-    
+    except (TypeError, DecodeError, InvalidAlgorithmError, InvalidAudienceError, InvalidIssuerError) as error:
+        # Log it.
+        raise AuthTokenJwtDecodeError from error
