@@ -67,3 +67,33 @@ class AuthSessionNotFoundError(AuthSessionError):
 class AuthSessionDeserializationError(AuthSessionError):
     def __init__(self):
         super().__init__("Failed to deserialize session object from the server.")
+
+
+class AuthTokenError(AuthBaseError):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
+class AuthTokenValidationError(AuthTokenError):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
+class AuthTokenKidNotFoundError(AuthTokenValidationError):
+    def __init__(self):
+        super().__init__("The key \"kid\" was not found in the JWT's header.")
+
+
+class AuthTokenPublicKeyError(AuthTokenValidationError):
+    def __init__(self):
+        super().__init__("Failed to obtain the public key from JWK.")
+
+
+class AuthTokenJwkNotFoundError(AuthTokenValidationError):
+    def __init__(self):
+        super().__init__("No JWK was found for the given JWKS.")
+
+
+class AuthTokenJwtDecodeError(AuthTokenValidationError):
+    def __init__(self):
+        super().__init__("Failed to decode JWT.")
