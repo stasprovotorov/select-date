@@ -4,7 +4,7 @@ from src.app.auth.exceptions import AuthTokenError
 from src.app.core.config import Environment
 from src.app.core.config import settings as global_settings
 from src.app.auth.config import settings as auth_settings
-from src.app.core.redis import client as redis_client
+from src.app.core.redis import async_redis
 
 
 async def fetch_token(code: str) -> dict:
@@ -45,7 +45,7 @@ async def fetch_token(code: str) -> dict:
 
 
 async def fetch_jwks() -> dict:
-    jwks_from_redis = await redis_client.get(global_settings.DB_REDIS_KEY_JWKS)
+    jwks_from_redis = await async_redis.client.get(global_settings.DB_REDIS_KEY_JWKS)
 
     if jwks_from_redis:
         jwks_dict = json.loads(jwks_from_redis)
@@ -65,7 +65,7 @@ async def fetch_jwks() -> dict:
                     jwks_dict = await response.json(content_type=None)
                     jwks_json_str = json.dumps(jwks_dict, ensure_ascii=False)
 
-                    await redis_client.set(
+                    await async_redis.client.set(
                         name=global_settings.DB_REDIS_KEY_JWKS, 
                         value=jwks_json_str, 
                         ex=global_settings.DB_REDIS_TTL_JWKS
