@@ -49,11 +49,6 @@ class AuthStateNotMatchError(AuthStateError):
         super().__init__("Authorization states do not match.")
 
 
-class AuthSessionGetError(AuthStateError):
-    def __init__(self):
-        super().__init__("Failed to obtain session object from the server.")
-
-
 class AuthSessionError(AuthBaseError):
     def __init__(self, *args):
         super().__init__(*args)
