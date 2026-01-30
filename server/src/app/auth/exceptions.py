@@ -39,6 +39,21 @@ class AuthBaseError(Exception):
         super().__init__(*args)
 
 
+class AuthStateError(AuthBaseError):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
+class AuthStateNotMatchError(AuthStateError):
+    def __init__(self):
+        super().__init__("Authorization states do not match.")
+
+
+class AuthSessionGetError(AuthStateError):
+    def __init__(self):
+        super().__init__("Failed to obtain session object from the server.")
+
+
 class AuthSessionError(AuthBaseError):
     def __init__(self, *args):
         super().__init__(*args)
@@ -67,6 +82,11 @@ class AuthSessionNotFoundError(AuthSessionError):
 class AuthSessionDeserializationError(AuthSessionError):
     def __init__(self):
         super().__init__("Failed to deserialize session object from the server.")
+
+
+class AuthSessionIdNotFound(AuthSessionError):
+    def __init__(self):
+        super().__init__("Session ID not found.")
 
 
 class AuthTokenError(AuthBaseError):
