@@ -97,3 +97,23 @@ class AuthTokenJwkNotFoundError(AuthTokenValidationError):
 class AuthTokenJwtDecodeError(AuthTokenValidationError):
     def __init__(self):
         super().__init__("Failed to decode JWT.")
+
+
+class AuthTokenClientError(AuthTokenError):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
+class AuthTokenUnsuccessfulResponseError(AuthTokenClientError):
+    def __init__(self):
+        super().__init__(f"Unsuccessful response code from Auth0 API.")
+        
+
+class AuthTokenJsonDecodeError(AuthTokenClientError):
+    def __init__(self):
+        super().__init__(f"Failed to decode response body to JSON.")
+
+
+class AuthTokenIdTokenNotFoundError(AuthTokenClientError):
+    def __init__(self):
+        super().__init__(f"ID token not found in response body.")
