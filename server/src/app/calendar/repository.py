@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from src.app.calendar.schemas import DateOperationSchema, DateOperationResultSchema, DateOperationType, DateItemSchema
 from src.app.calendar.models import SelectedDateModel
-from src.app.calendar.exceptions import DatabaseError
+from src.app.calendar.exceptions import DatabaseBatchOperationError, DatabaseGetDatesError
 
 
 class SqlAlchemyCalendarRepository:
@@ -36,7 +36,8 @@ class SqlAlchemyCalendarRepository:
                     date_item_row = execution_result.mappings().first()
 
                     if not date_item_row and date_oper.oper_type == DateOperationType.DELETE:
-                        raise DatabaseError(404, "Specified date not found for the user")
+                        # Log it.
+                        raise DatabaseBatchOperationError("Specified date not found for the user.")
                     
                     date_item_out = DateItemSchema(
                         calendar_date=date_item_row["calendar_date"],
@@ -50,9 +51,11 @@ class SqlAlchemyCalendarRepository:
                     batch_results.append(DateOperationResultSchema(ok=True, operation=date_oper_out))
 
                     await savepoint.commit()
-                except SQLAlchemyError as err:
+                except (DatabaseBatchOperationError, SQLAlchemyError) as err:
                     await savepoint.rollback()
-                    batch_results.append(DateOperationResultSchema(ok=False, operation=date_oper, message=repr(err)))
+                    message = repr(err)
+                    # Log it.
+                    batch_results.append(DateOperationResultSchema(ok=False, operation=date_oper, message=message))
 
         return batch_results
 
@@ -65,7 +68,8 @@ class SqlAlchemyCalendarRepository:
                 execution_result = await session.execute(statement)
                 date_rows = execution_result.scalars().all()
             except SQLAlchemyError as err:
-                raise DatabaseError(500, repr(err))
+                # Log it.
+                raise DatabaseGetDatesError from err
 
         if date_rows:
             for date_row in date_rows:
