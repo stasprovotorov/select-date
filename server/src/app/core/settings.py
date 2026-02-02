@@ -1,6 +1,8 @@
 from enum import Enum
+from urllib.parse import urljoin
 from pathlib import Path
-from pydantic import HttpUrl, SecretStr, Field
+
+from pydantic import HttpUrl, SecretStr, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT_DIRECTORY: Path = Path(__file__).parent.parent.parent.parent.resolve()
@@ -47,10 +49,26 @@ class Settings(BaseSettings):
     AUTH0_REDIRECT_PATH: str = Field(pattern=PATH_REGEX_PATTERN)
     AUTH0_LOGOUT_PATH: str = Field(pattern=PATH_REGEX_PATTERN)
 
+    # Composite fields
+    AUTH0_TOKEN_URL: str | None = None
+    AUTH0_AUTHORIZE_URL: str | None = None
+    AUTH0_JWKS_URL: str | None = None
+    AUTH0_LOGOUT_URL: str | None = None
+    AUTH0_REDIRECT_URI: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=f"{BACKEND_ROOT_DIRECTORY}/.env",
         env_file_encoding="utf-8"
     )
+
+    @model_validator(mode="after")
+    def build_composite_fields(self):
+        self.AUTH0_TOKEN_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_TOKEN_PATH)
+        self.AUTH0_AUTHORIZE_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_AUTHORIZE_PATH)
+        self.AUTH0_JWKS_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_JWKS_PATH)
+        self.AUTH0_LOGOUT_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_LOGOUT_PATH)
+        self.AUTH0_REDIRECT_URI = urljoin(self.APP_BACKEND_BASE_URL.encoded_string(), f"{self.APP_BACKEND_API_PATH}{self.AUTH0_REDIRECT_PATH}")
+        return self
 
 
 settings = Settings()
