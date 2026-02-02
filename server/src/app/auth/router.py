@@ -1,7 +1,9 @@
 import secrets
+
 from fastapi import APIRouter, Depends, Cookie
 from fastapi.responses import RedirectResponse
-from src.app.core.config import settings as global_settings
+
+from src.app.core.settings import settings
 from src.app.auth.sessions import SessionService
 from src.app.auth.dependencies import require_auth, validate_state, get_authorized_user, get_session_service
 from src.app.auth.utils import build_login_uri, build_logout_uri
@@ -41,14 +43,14 @@ async def login_callback(
     session_id =  await session.create_session(user)
 
     response = RedirectResponse(
-        url=global_settings.APP_FRONTEND_BASE_URL, 
+        url=settings.APP_FRONTEND_BASE_URL, 
         status_code=302
     )
 
     response.set_cookie(
         key="session_id", 
         value=session_id, 
-        max_age=global_settings.SESSION_TTL,
+        max_age=settings.SESSION_TTL,
         path="/",
         secure=False,
         httponly=True,

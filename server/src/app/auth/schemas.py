@@ -1,6 +1,6 @@
 import time
 from pydantic import BaseModel
-from src.app.core.config import settings
+from src.app.core.settings import settings
 
 
 class Session(BaseModel):

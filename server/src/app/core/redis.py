@@ -1,5 +1,5 @@
 from redis.asyncio import Redis, ConnectionError
-from src.app.core.config import settings
+from src.app.core.settings import settings
 
 
 class AsyncRedis:

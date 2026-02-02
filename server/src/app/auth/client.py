@@ -3,10 +3,8 @@ from aiohttp import TCPConnector, ClientSession
 
 import redis
 
-from src.app.core.config import Environment
-from src.app.core.config import settings as global_settings
+from src.app.core.settings import Environment, settings
 from src.app.core.redis import async_redis
-from src.app.auth.config import settings as auth_settings
 from src.app.auth.exceptions import (
     AuthTokenUnsuccessfulResponseError,
     AuthTokenJsonDecodeError,
@@ -16,21 +14,21 @@ from src.app.auth.exceptions import (
 
 async def fetch_token(code: str) -> dict:
     connector = None
-    if global_settings.ENVIRONMENT == Environment.DEVELOPMENT:
+    if settings.ENVIRONMENT == Environment.DEVELOPMENT:
         connector = TCPConnector(ssl=False)
     
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
     request_body = {
-        "client_id": auth_settings.CLIENT_ID,
-        "client_secret": auth_settings.CLIENT_SECRET.get_secret_value(),
+        "client_id": settings.AUTH0_CLIENT_ID,
+        "client_secret": settings.AUTH0_CLIENT_SECRET.get_secret_value(),
         "code": code,
-        "redirect_uri": auth_settings.REDIRECT_URI,
+        "redirect_uri": settings.AUTH0_REDIRECT_URI,
         "grant_type": "authorization_code"
     }
 
     async with ClientSession(connector=connector) as session:
-        async with session.post(auth_settings.TOKEN_URL, headers=headers, data=request_body) as response:
+        async with session.post(settings.AUTH0_TOKEN_URL, headers=headers, data=request_body) as response:
             if response.status != 200:
                 # Log it.
                 raise AuthTokenUnsuccessfulResponseError
@@ -54,7 +52,7 @@ async def fetch_jwks() -> dict:
     jwks_from_redis = None
 
     try:
-        jwks_from_redis = await async_redis.client.get(global_settings.DB_REDIS_KEY_JWKS)
+        jwks_from_redis = await async_redis.client.get(settings.DB_REDIS_KEY_JWKS)
     except redis.ConnectionError as error:
         # Log it.
         pass
@@ -69,11 +67,11 @@ async def fetch_jwks() -> dict:
             pass
 
     connector = None
-    if global_settings.ENVIRONMENT == Environment.DEVELOPMENT:
+    if settings.ENVIRONMENT == Environment.DEVELOPMENT:
         connector = TCPConnector(ssl=False)
 
     async with ClientSession(connector=connector) as session:
-        async with session.get(auth_settings.JWKS_URL) as response:
+        async with session.get(settings.AUTH0_JWKS_URL) as response:
             if response.status != 200:
                 raise AuthTokenUnsuccessfulResponseError
             
@@ -87,9 +85,9 @@ async def fetch_jwks() -> dict:
 
     try:
         await async_redis.client.set(
-            name=global_settings.DB_REDIS_KEY_JWKS, 
+            name=settings.DB_REDIS_KEY_JWKS, 
             value=jwks_json_str, 
-            ex=global_settings.DB_REDIS_TTL_JWKS
+            ex=settings.DB_REDIS_TTL_JWKS
         )
     except redis.ConnectionError as error:
         # Log it.

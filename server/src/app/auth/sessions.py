@@ -2,7 +2,7 @@ import json
 
 import redis
 
-from src.app.core.config import settings
+from src.app.core.settings import settings
 from src.app.core.redis import async_redis
 from src.app.auth.schemas import Session
 from src.app.auth.utils import get_session_id, get_session_key

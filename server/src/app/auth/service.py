@@ -8,7 +8,7 @@ from jwt.exceptions import (
     InvalidIssuerError
 )
 
-from src.app.auth.config import settings as auth_settings
+from src.app.core.settings import settings
 from src.app.auth.exceptions import (
     AuthTokenKidNotFoundError, 
     AuthTokenPublicKeyError, 
@@ -49,9 +49,9 @@ def validate_jwt(token: str, jwks: dict) -> dict:
         payload = jwt.decode(
             jwt=token,
             key=public_key,
-            algorithms=auth_settings.ALGORITHM,
-            audience=auth_settings.CLIENT_ID,
-            issuer=auth_settings.DOMAIN.encoded_string(),
+            algorithms=settings.AUTH0_ALGORITHM,
+            audience=settings.AUTH0_CLIENT_ID,
+            issuer=settings.AUTH0_DOMAIN.encoded_string(),
             leeway=5
         )
         # Log it.
