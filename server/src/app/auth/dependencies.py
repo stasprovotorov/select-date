@@ -1,3 +1,4 @@
+import logging
 import secrets
 
 from fastapi import Depends, Query, Cookie
@@ -11,6 +12,8 @@ from src.app.auth.exceptions import (
     AuthSessionError
 )
 
+logger = logging.getLogger(__name__)
+
 
 async def get_session_service() -> SessionService:
     return session_service
@@ -21,17 +24,17 @@ async def require_auth(
     session_service: SessionService = Depends(get_session_service)
 ) -> dict:
     if not session_id:
-        # Log it.
+        logger.warning("Session ID not provided in the cookie.")
         raise AuthSessionIdNotFound
 
     try:    
         session = await session_service.get_session(session_id)
-    except AuthSessionError as error:
-        # Log it.
+    except AuthSessionError:
+        logger.warning(f"Session ID not found in Redis: session_id={session_id}.")
         raise
 
     user = session["user"]
-    # Log it.
+    logger.info(f"User successfully authenticated: session_id={session_id}.")
     return user
 
 
@@ -40,18 +43,13 @@ async def validate_state(
     auth_state: str | None = Cookie(None)
 ) -> None:
     if not secrets.compare_digest(state, auth_state):
-        # Log it.
+        logger.error("The 'state' value from the request does not match the one from Auth0.")
         raise AuthStateNotMatchError
 
 
 async def get_authorized_user(code: str) -> dict:
     jwt = await fetch_token(code)
-    # Log it.
-
     jwks = await fetch_jwks()
-    # Log it.
-
     user_info = validate_jwt(jwt, jwks)
-    # Log it.
-    
+    logger.info("Authorized user data successfully retrieved.")    
     return user_info

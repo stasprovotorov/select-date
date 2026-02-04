@@ -1,4 +1,5 @@
 import json
+import logging
 
 import redis
 
@@ -13,6 +14,8 @@ from src.app.auth.exceptions import (
     AuthSessionNotFoundError, 
     AuthSessionDeserializationError
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SessionService:
@@ -30,8 +33,9 @@ class SessionService:
                 value=session.model_dump_json(),
                 ex=settings.SESSION_TTL
             )
+            logger.info(f"Session created in Redis: session_key={session_key}.")
         except redis.ConnectionError as error:
-            # Log it.
+            logger.error("No connection to the Redis server.")
             raise AuthSessionSetError from error
 
         return session_id
@@ -46,15 +50,16 @@ class SessionService:
                 raise AuthSessionNotFoundError
             
             session_dict = json.loads(session)
+            logger.info(f"Session retrieved from Redis: session_key={session_key}.")
             return session_dict
         except redis.ConnectionError as error:
-            # Log it.
+            logger.error("No connection to the Redis server.")
             raise AuthSessionGetError from error
         except json.JSONDecodeError as error:
-            # Log it.
+            logger.error(f"Failed to serialize session data received from Redis to JSON: session_key={session_key}.")
             raise AuthSessionDeserializationError from error
         except AuthSessionNotFoundError as error:
-            # Log it.
+            logger.error(f"No session found on the Redis server: session_key={session_key}.")
             raise
     
     async def remove_session(self, session_id: str) -> None:
@@ -63,11 +68,10 @@ class SessionService:
         try:
             entry_count = await self.storage.delete(session_key)
             if entry_count == 0:
-                # Log it.
-                pass
-            # Log it.
+                logger.warning(f"No session found for deletion on the Redis server: session_key={session_key}.")
+            logger.info(f"Session has been deleted from the Redis server: session_key={session_key}.")
         except redis.ConnectionError as error:
-            # Log it.
+            logger.error("No connection to the Redis server.")
             raise AuthSessionDeleteError from error
 
 

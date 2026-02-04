@@ -1,3 +1,4 @@
+import logging
 import jwt
 from jwt.algorithms import RSAAlgorithm
 from jwt.exceptions import (
@@ -16,6 +17,8 @@ from src.app.auth.exceptions import (
     AuthTokenJwtDecodeError
 )
 
+logger = logging.getLogger(__name__)
+
 
 def validate_jwt(token: str, jwks: dict) -> dict:
     public_key = None
@@ -24,25 +27,25 @@ def validate_jwt(token: str, jwks: dict) -> dict:
     kid_jwt = unverified_header.get("kid")
 
     if not kid_jwt:
-        # Log it.
+        logger.error("No 'kid' found in the JWT header.")
         raise AuthTokenKidNotFoundError
-    
+    logger.info("Received 'kid' from the JWT header.")
+
     keys = jwks.get("keys")
 
-    if keys:
-        for jwk in keys:
-            kid_jwk = jwk.get("kid")
+    for jwk in keys:
+        kid_jwk = jwk.get("kid")
 
-            if kid_jwt == kid_jwk:
-                try:
-                    public_key = RSAAlgorithm.from_jwk(jwk)
-                    # Log it.
-                except InvalidKeyError as error:
-                    # Log it.
-                    raise AuthTokenPublicKeyError from error
+        if kid_jwt == kid_jwk:
+            try:
+                public_key = RSAAlgorithm.from_jwk(jwk)
+                logger.info("Public key retrieved from JWK.")
+            except InvalidKeyError as error:
+                logger.error("Failed to obtain public key from JWT.")
+                raise AuthTokenPublicKeyError from error
 
-    if not keys or not public_key:
-        # Log it.
+    if not public_key:
+        logger.error("No matching 'kid' found between the JWT and the JWKS.")
         raise AuthTokenJwkNotFoundError
 
     try:
@@ -54,8 +57,8 @@ def validate_jwt(token: str, jwks: dict) -> dict:
             issuer=settings.AUTH0_DOMAIN.encoded_string(),
             leeway=5
         )
-        # Log it.
+        logger.info("JWT successfully decoded.")
         return payload
     except (TypeError, DecodeError, InvalidAlgorithmError, InvalidAudienceError, InvalidIssuerError) as error:
-        # Log it.
+        logger.error("Failed to decode the JWT.", exc_info=True)
         raise AuthTokenJwtDecodeError from error
