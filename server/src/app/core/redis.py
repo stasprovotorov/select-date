@@ -1,5 +1,10 @@
+import logging
+
 from redis.asyncio import Redis, ConnectionError
+
 from src.app.core.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AsyncRedis:
@@ -16,9 +21,9 @@ class AsyncRedis:
     async def check_redis_server_connection(self):
         try:
             await self.client.ping()
-            # Log it.
+            logger.info("Successfully connected to Redis.")
         except ConnectionError:
-            # Log it.
+            logger.error("Failed to connect to Redis.", exc_info=True)
             raise
 
 
