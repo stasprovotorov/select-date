@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.app.calendar.schemas import DateOperationSchema, DateOperationResultSchema, DateOperationType, DateItemSchema
 from src.app.calendar.models import SelectedDateModel
-from src.app.calendar.exceptions import DatabaseBatchOperationError, DatabaseGetDatesError
+from src.app.calendar.exceptions import DatabaseGetDatesError, DatabaseDateNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class SqlAlchemyCalendarRepository:
 
                     if not date_item_row and date_oper.oper_type == DateOperationType.DELETE:
                         logger.warning(f"Date to be deleted for the user was not found in the database: user_id={user_id}, calendar_date={date_item.calendar_date}")
-                        raise DatabaseBatchOperationError("Specified date not found for the user.")
+                        raise DatabaseDateNotFoundError
                     
                     date_item_out = DateItemSchema(
                         calendar_date=date_item_row["calendar_date"],
@@ -57,7 +57,7 @@ class SqlAlchemyCalendarRepository:
                     batch_results.append(DateOperationResultSchema(ok=True, operation=date_oper_out))
 
                     await savepoint.commit()
-                except (DatabaseBatchOperationError, SQLAlchemyError) as err:
+                except (DatabaseDateNotFoundError, SQLAlchemyError) as err:
                     await savepoint.rollback()
                     message = repr(err)
                     logger.error("Date operation cancelled.", exc_info=True)

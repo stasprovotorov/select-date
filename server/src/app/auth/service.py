@@ -11,10 +11,10 @@ from jwt.exceptions import (
 
 from src.app.core.settings import settings
 from src.app.auth.exceptions import (
-    AuthTokenKidNotFoundError, 
-    AuthTokenPublicKeyError, 
-    AuthTokenJwkNotFoundError, 
-    AuthTokenJwtDecodeError
+    AuthorizationKIDNotFoundError,
+    AuthorizationGetPublicKeyError,
+    AuthorizationJWKNotFoundError,
+    AuthorizationJWTDecodeError
 )
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def validate_jwt(token: str, jwks: dict) -> dict:
 
     if not kid_jwt:
         logger.error("No 'kid' found in the JWT header.")
-        raise AuthTokenKidNotFoundError
+        raise AuthorizationKIDNotFoundError
     logger.info("Received 'kid' from the JWT header.")
 
     keys = jwks.get("keys")
@@ -42,11 +42,11 @@ def validate_jwt(token: str, jwks: dict) -> dict:
                 logger.info("Public key retrieved from JWK.")
             except InvalidKeyError as error:
                 logger.error("Failed to obtain public key from JWT.")
-                raise AuthTokenPublicKeyError from error
+                raise AuthorizationGetPublicKeyError from error
 
     if not public_key:
         logger.error("No matching 'kid' found between the JWT and the JWKS.")
-        raise AuthTokenJwkNotFoundError
+        raise AuthorizationJWKNotFoundError
 
     try:
         payload = jwt.decode(
@@ -61,4 +61,4 @@ def validate_jwt(token: str, jwks: dict) -> dict:
         return payload
     except (TypeError, DecodeError, InvalidAlgorithmError, InvalidAudienceError, InvalidIssuerError) as error:
         logger.error("Failed to decode the JWT.", exc_info=True)
-        raise AuthTokenJwtDecodeError from error
+        raise AuthorizationJWTDecodeError from error

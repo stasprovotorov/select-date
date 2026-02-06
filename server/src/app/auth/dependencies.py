@@ -6,11 +6,7 @@ from fastapi import Depends, Query, Cookie
 from src.app.auth.sessions import SessionService, session_service
 from src.app.auth.client import fetch_jwks, fetch_token
 from src.app.auth.service import validate_jwt
-from src.app.auth.exceptions import (
-    AuthStateNotMatchError,
-    AuthSessionIdNotFound, 
-    AuthSessionError
-)
+from src.app.auth.exceptions import AuthorizationStateNotMatchError, AuthorizationSessionIDNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +21,11 @@ async def require_auth(
 ) -> dict:
     if not session_id:
         logger.warning("Session ID not provided in the cookie.")
-        raise AuthSessionIdNotFound
+        raise AuthorizationSessionIDNotFoundError
 
     try:    
         session = await session_service.get_session(session_id)
-    except AuthSessionError:
+    except AuthorizationSessionIDNotFoundError:
         logger.warning(f"Session ID not found in Redis: session_id={session_id}.")
         raise
 
@@ -44,7 +40,7 @@ async def validate_state(
 ) -> None:
     if not secrets.compare_digest(state, auth_state):
         logger.error("The 'state' value from the request does not match the one from Auth0.")
-        raise AuthStateNotMatchError
+        raise AuthorizationStateNotMatchError
 
 
 async def get_authorized_user(code: str) -> dict:

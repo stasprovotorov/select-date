@@ -1,134 +1,76 @@
-from fastapi.exceptions import HTTPException
-from starlette.status import HTTP_400_BAD_REQUEST, HTTP_401_UNAUTHORIZED
+from src.app.core.exceptions import ApplicationBaseError
 
 
-class UserNotAuthorized(HTTPException):
-    def __init__(self, detail="User is not authorized."):
-        super().__init__(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail=detail
-        )
+class AuthorizationBaseError(ApplicationBaseError):
+    def __init__(self, message: str = "Unauthorized.", status_code: int = 401) -> None:
+        super().__init__(message, status_code)
 
 
-class AuthStatesNotMatched(HTTPException):
-    def __init__(self, detail="Authorization states do not match."):
-        super().__init__(
-            status_code=HTTP_400_BAD_REQUEST, 
-            detail=detail
-        )
+class AuthorizationStateNotMatchError(AuthorizationBaseError):
+    def __init__(self, message: str = "Authorization states do not match.") -> None:
+        super().__init__(message)
 
 
-class AuthTokenError(HTTPException):
-    def __init__(self, detail="User is not authorized."):
-        super().__init__(
-            status_code=HTTP_401_UNAUTHORIZED, 
-            detail=detail
-        )
+class AuthorizationGetSessionError(AuthorizationBaseError):
+    def __init__(self, message: str = "Failed to obtain session object from the server.") -> None:
+        super().__init__(message)
 
 
-class TokenValidationError(HTTPException):
-    def __init__(self, detail):
-        super().__init__(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail=f"Failed to validate token: {detail}"
-        )
+class AuthorizationSetSessionError(AuthorizationBaseError):
+    def __init__(self, message: str = "Failed to set session object in the server.") -> None:
+        super().__init__(message)
 
 
-class AuthBaseError(Exception):
-    def __init__(self, *args):
-        super().__init__(*args)
+class AuthorizationDeleteSessionError(AuthorizationBaseError):
+    def __init__(self, message: str = "Failed to delete session object from the server.") -> None:
+        super().__init__(message)
 
 
-class AuthStateError(AuthBaseError):
-    def __init__(self, *args):
-        super().__init__(*args)
+class AuthorizationSessionNotFoundError(AuthorizationBaseError):
+    def __init__(self, message: str = "Session was not found in the server.") -> None:
+        super().__init__(message)
 
 
-class AuthStateNotMatchError(AuthStateError):
-    def __init__(self):
-        super().__init__("Authorization states do not match.")
+class AuthorizationSessionDeserializationError(AuthorizationBaseError):
+    def __init__(self, message: str = "Failed to deserialize session object from the server.") -> None:
+        super().__init__(message)
 
 
-class AuthSessionError(AuthBaseError):
-    def __init__(self, *args):
-        super().__init__(*args)
+class AuthorizationSessionIDNotFoundError(AuthorizationBaseError):
+    def __init__(self, message: str = "Session ID not found.") -> None:
+        super().__init__(message)
 
 
-class AuthSessionGetError(AuthSessionError):
-    def __init__(self):
-        super().__init__("Failed to obtain session object from the server.")
+class AuthorizationKIDNotFoundError(AuthorizationBaseError):
+    def __init__(self, message: str = "The key 'kid' was not found in the JWT's header.") -> None:
+        super().__init__(message)
 
 
-class AuthSessionSetError(AuthSessionError):
-    def __init__(self):
-        super().__init__("Failed to set session object in the server.")
+class AuthorizationGetPublicKeyError(AuthorizationBaseError):
+    def __init__(self, message: str = "Failed to obtain the public key from JWK.") -> None:
+        super().__init__(message)
 
 
-class AuthSessionDeleteError(AuthSessionError):
-    def __init__(self):
-        super().__init__("Failed to remove session object from the server.")
+class AuthorizationJWKNotFoundError(AuthorizationBaseError):
+    def __init__(self, message: str = "No JWK was found for the given JWKS.") -> None:
+        super().__init__(message)
 
 
-class AuthSessionNotFoundError(AuthSessionError):
-    def __init__(self):
-        super().__init__("Session was not found in the server.")
+class AuthorizationJWTDecodeError(AuthorizationBaseError):
+    def __init__(self, message: str = "Failed to decode JWT.") -> None:
+        super().__init__(message)
 
 
-class AuthSessionDeserializationError(AuthSessionError):
-    def __init__(self):
-        super().__init__("Failed to deserialize session object from the server.")
-
-
-class AuthSessionIdNotFound(AuthSessionError):
-    def __init__(self):
-        super().__init__("Session ID not found.")
-
-
-class AuthTokenError(AuthBaseError):
-    def __init__(self, *args):
-        super().__init__(*args)
-
-
-class AuthTokenValidationError(AuthTokenError):
-    def __init__(self, *args):
-        super().__init__(*args)
-
-
-class AuthTokenKidNotFoundError(AuthTokenValidationError):
-    def __init__(self):
-        super().__init__("The key \"kid\" was not found in the JWT's header.")
-
-
-class AuthTokenPublicKeyError(AuthTokenValidationError):
-    def __init__(self):
-        super().__init__("Failed to obtain the public key from JWK.")
-
-
-class AuthTokenJwkNotFoundError(AuthTokenValidationError):
-    def __init__(self):
-        super().__init__("No JWK was found for the given JWKS.")
-
-
-class AuthTokenJwtDecodeError(AuthTokenValidationError):
-    def __init__(self):
-        super().__init__("Failed to decode JWT.")
-
-
-class AuthTokenClientError(AuthTokenError):
-    def __init__(self, *args):
-        super().__init__(*args)
-
-
-class AuthTokenUnsuccessfulResponseError(AuthTokenClientError):
-    def __init__(self):
-        super().__init__(f"Unsuccessful response code from Auth0 API.")
+class AuthorizationUnsuccessfulAuth0ResponseError(AuthorizationBaseError):
+    def __init__(self, message: str = "Unsuccessful response code from Auth0 API.") -> None:
+        super().__init__(message)
         
 
-class AuthTokenJsonDecodeError(AuthTokenClientError):
-    def __init__(self):
-        super().__init__(f"Failed to decode response body to JSON.")
+class AuthorizationJSONDecodeError(AuthorizationBaseError):
+    def __init__(self, message: str = "Failed to decode response body to JSON.") -> None:
+        super().__init__(message)
 
 
-class AuthTokenIdTokenNotFoundError(AuthTokenClientError):
-    def __init__(self):
-        super().__init__(f"ID token not found in response body.")
+class AuthorizationTokenNotFoundError(AuthorizationBaseError):
+    def __init__(self, message: str = "ID token not found in response body.") -> None:
+        super().__init__(message)

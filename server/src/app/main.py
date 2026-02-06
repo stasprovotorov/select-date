@@ -1,13 +1,18 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from redis import RedisError
 
 from src.app.core.logs import setup_logging
 from src.app.core.database import async_db
 from src.app.core.redis import async_redis
 from src.app.core.settings import settings
+from src.app.core.exceptions import ApplicationBaseError
 from src.app.auth.router import router as auth_router
+from src.app.auth.exceptions import AuthorizationBaseError
+from src.app.calendar.exceptions import DatabaseBaseError
 from src.app.calendar.router import router as calendar_router
 
 
@@ -29,6 +34,19 @@ app.add_middleware(
     allow_methods=[settings.APP_BACKEND_ALLOW_METHODS],
     allow_headers=[settings.APP_BACKEND_ALLOW_HEADERS]
 )
+
+
+@app.exception_handler(ApplicationBaseError)
+async def application_error_handler(_: Request, exc: ApplicationBaseError):
+    message: str
+
+    if isinstance(exc, AuthorizationBaseError):
+        message = "Unauthorized"
+    elif isinstance(exc, (RedisError, DatabaseBaseError)):
+        message = "Internal Server Error"
+
+    return JSONResponse(status_code=exc.status_code, content={"message": message})
+
 
 app.include_router(auth_router)
 app.include_router(calendar_router)
