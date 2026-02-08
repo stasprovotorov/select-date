@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.app.calendar.schemas import DateOperationSchema, DateOperationResultSchema, DateOperationType, DateItemSchema
 from src.app.calendar.models import SelectedDateModel
-from src.app.calendar.exceptions import DatabaseGetDatesError, DatabaseDateNotFoundError
+from src.app.core import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class SqlAlchemyCalendarRepository:
 
                     if not date_item_row and date_oper.oper_type == DateOperationType.DELETE:
                         logger.warning(f"Date to be deleted for the user was not found in the database: user_id={user_id}, calendar_date={date_item.calendar_date}")
-                        raise DatabaseDateNotFoundError
+                        raise exceptions.NotFoundError("Specified date not found for the user.")
                     
                     date_item_out = DateItemSchema(
                         calendar_date=date_item_row["calendar_date"],
@@ -57,9 +57,9 @@ class SqlAlchemyCalendarRepository:
                     batch_results.append(DateOperationResultSchema(ok=True, operation=date_oper_out))
 
                     await savepoint.commit()
-                except (DatabaseDateNotFoundError, SQLAlchemyError) as err:
+                except (SQLAlchemyError, exceptions.NotFoundError) as error:
                     await savepoint.rollback()
-                    message = repr(err)
+                    message = repr(error)
                     logger.error("Date operation cancelled.", exc_info=True)
                     batch_results.append(DateOperationResultSchema(ok=False, operation=date_oper, message=message))
 
@@ -75,9 +75,9 @@ class SqlAlchemyCalendarRepository:
                 statement = select(SelectedDateModel).where(SelectedDateModel.user_id == user_id)
                 execution_result = await session.execute(statement)
                 date_rows = execution_result.scalars().all()
-            except SQLAlchemyError as err:
+            except SQLAlchemyError as error:
                 logger.error(f"Failed to retrieve dates for the user from database: user_id={user_id}.", exc_info=True)
-                raise DatabaseGetDatesError from err
+                raise exceptions.NotImplementedError("Failed to retrieve dates for the user from database.") from error
 
         if date_rows:
             for date_row in date_rows:
