@@ -9,12 +9,12 @@ from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
 from src.app.auth.schemas import UserSessionSchema
 from src.app.auth.models import UserSessionTable
 from src.app.core.database import db
-from src.app.core.redis import redis_adapter
+from src.app.core.cache import redis_adapter
 from src.app.core import exceptions
 from src.app.core.settings import settings
 
 if TYPE_CHECKING:
-    from src.app.core.redis import RedisAdapter
+    from src.app.core.cache import RedisAdapter
 
 logger = logging.getLogger(__name__)
 
