@@ -1,7 +1,7 @@
 import secrets
 
 from fastapi import APIRouter, Depends, Cookie
-from fastapi.responses import RedirectResponse
+from fastapi.responses import Response, RedirectResponse
 
 from src.app.core.settings import settings
 from src.app.auth.service import UserSessionService
@@ -64,9 +64,11 @@ async def login_callback(
 
 @router.post("/logout")
 async def logout(
+    response: Response,
     session_id: str | None = Cookie(None),
-    session: UserSessionService = Depends(get_user_session_service)
+    session: UserSessionService = Depends(get_user_session_service),
 ) -> dict:
     await session.delete_user_session(session_id)
+    response.delete_cookie(key="session_id", path="/", secure=False, httponly=True, samesite="lax")
     url = build_logout_uri()
     return {"redirectTo": url}
