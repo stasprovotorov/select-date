@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     DB_SQLITE_URL: str
     DB_SQLITE_JOURNAL_MODE: str
+    DB_SQLITE_WAL_CHECKPOINT: str
 
     DB_REDIS_HOST: str
     DB_REDIS_PORT: int

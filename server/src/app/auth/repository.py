@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
 
 from src.app.auth.schemas import UserSessionSchema
 from src.app.auth.models import UserSessionTable
-from src.app.core.database import async_db
+from src.app.core.database import db
 from src.app.core.redis import redis_adapter
 from src.app.core import exceptions
 from src.app.core.settings import settings
@@ -184,5 +184,5 @@ class UserSessionRedisRepository:
             raise
 
 
-user_session_db_repo = UserSessionSQLAlchemyRepository(db_session_maker=async_db.async_session)
+user_session_db_repo = UserSessionSQLAlchemyRepository(db_session_maker=db.sessionmaker)
 user_session_cache_repo = UserSessionRedisRepository(redis_adapter=redis_adapter)

@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.app.core.logs import setup_logging
-from src.app.core.database import async_db
+from src.app.core.database import db
 from src.app.core.redis import redis_adapter
 from src.app.core.settings import settings
 from src.app.core.exceptions import ApplicationBaseError
@@ -16,10 +16,10 @@ from src.app.calendar.router import router as calendar_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
-    await async_db.initialize_async_database()
+    await db.initialize_database()
     await redis_adapter.ping()
     yield
-    await async_db.shutdown_async_database()
+    await db.shutdown_database()
 
 
 app = FastAPI(lifespan=lifespan)
