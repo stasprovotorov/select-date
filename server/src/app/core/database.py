@@ -6,40 +6,43 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from src.app.core.settings import settings
 from src.app.core.models import Base
 
-# Imports for Base.metadata.create_all execution (side effects, not used).
+# Side effect imports for Base.metadata.create_all execution
 from src.app.auth.models import UserSessionTable
 from src.app.calendar.models import SelectedDateModel
 
 logger = logging.getLogger(__name__)
 
 
-class AsyncDatabase:
-    def __init__(self):
-        self.url = settings.DB_SQLITE_URL
-        self.async_engine = create_async_engine(self.url)
-        self.async_session = async_sessionmaker(bind=self.async_engine)
+class SQLiteAsyncDatabase:
+    def __init__(self, url: str) -> None:
+        self.url = url
+        self.engine = create_async_engine(self.url)
+        self.sessionmaker = async_sessionmaker(bind=self.engine)
 
-    async def initialize_async_database(self):
-        logger.info("Asynchronous SQLite database initialization started.")
+    async def initialize_database(self) -> None:
+        logger.info("Database initialization started")
+        logger.info("Database URL: %s", self.url)
 
-        async with self.async_engine.begin() as connection:
-            journal_mode = f"PRAGMA journal_mode={settings.DB_SQLITE_JOURNAL_MODE}"
-            logger.info(f"Set jounal mode. Execute: {journal_mode}.")
-            await connection.execute(text(journal_mode))
-
-            logger.info("Create tables.")
+        async with self.engine.begin() as connection:
+            journal_mode = f"PRAGMA journal_mode={settings.DB_SQLITE_JOURNAL_MODE};"
+            statement = text(journal_mode)
+            logger.info("Executing statement: %s", journal_mode)
+            await connection.execute(statement)
+            logger.info("Creating tables")
             await connection.run_sync(Base.metadata.create_all)
 
-        logger.info("Asynchronous SQLite database initialization finished.")
+        logger.info("Database initialization finished")
 
-    async def shutdown_async_database(self):
-        logger.info("Asynchronous SQLite database shutdown started.")
+    async def shutdown_database(self) -> None:
+        logger.info("Database shutdown started")
 
-        async with self.async_engine.begin() as connection:
-            logger.info("Save data from WAL. Execute: PRAGMA wal_checkpoint(FULL).")
-            await connection.execute(text("PRAGMA wal_checkpoint(FULL)"))
+        async with self.engine.begin() as connection:
+            wal_checkpoint = f"PRAGMA wal_checkpoint({settings.DB_SQLITE_WAL_CHECKPOINT});"
+            statement = text(wal_checkpoint)
+            logger.info("Executing statement: %s", wal_checkpoint)
+            await connection.execute(statement)
 
-        logger.info("Asynchronous SQLite database shutdown finished.")
+        logger.info("Database shutdown finished")
 
 
-async_db: AsyncDatabase = AsyncDatabase()
+db = SQLiteAsyncDatabase(settings.DB_SQLITE_URL)
