@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, Cookie
 from fastapi.responses import RedirectResponse
 
 from src.app.core.settings import settings
-from src.app.auth.sessions import SessionService
-from src.app.auth.dependencies import require_auth, validate_state, get_authorized_user, get_session_service
+from src.app.auth.service import UserSessionService
+from src.app.auth.schemas import UserSessionSchema
+from src.app.auth.dependencies import require_auth, validate_state, get_authorized_user, get_user_session_service
 from src.app.auth.utils import build_login_uri, build_logout_uri
 
 
@@ -38,9 +39,9 @@ async def login(auth_state: str | None = Cookie(None)) -> RedirectResponse:
 @router.get("/login/callback", dependencies=[Depends(validate_state)])
 async def login_callback(
     user: dict = Depends(get_authorized_user),
-    session: SessionService = Depends(get_session_service)
+    session: UserSessionService = Depends(get_user_session_service)
 ) -> RedirectResponse:
-    session_id =  await session.create_session(user)
+    user_session: UserSessionSchema =  await session.set_user_session(user)
 
     response = RedirectResponse(
         url=settings.APP_FRONTEND_BASE_URL, 
@@ -49,12 +50,12 @@ async def login_callback(
 
     response.set_cookie(
         key="session_id", 
-        value=session_id, 
-        max_age=settings.SESSION_TTL,
+        value=user_session.id, 
+        max_age=settings.USER_SESSION_TTL,
         path="/",
         secure=False,
         httponly=True,
-        samesite="lax"
+        samesite="lax",
     )
 
     response.delete_cookie(key="auth_state", path="/")
@@ -64,8 +65,8 @@ async def login_callback(
 @router.post("/logout")
 async def logout(
     session_id: str | None = Cookie(None),
-    session: SessionService = Depends(get_session_service)
+    session: UserSessionService = Depends(get_user_session_service)
 ) -> dict:
-    await session.remove_session(session_id)
+    await session.delete_user_session(session_id)
     url = build_logout_uri()
     return {"redirectTo": url}

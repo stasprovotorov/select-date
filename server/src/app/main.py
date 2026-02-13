@@ -3,16 +3,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from redis import RedisError
 
 from src.app.core.logs import setup_logging
 from src.app.core.database import async_db
-from src.app.core.redis import async_redis
+from src.app.core.redis import redis_adapter
 from src.app.core.settings import settings
 from src.app.core.exceptions import ApplicationBaseError
 from src.app.auth.router import router as auth_router
-from src.app.auth.exceptions import AuthorizationBaseError
-from src.app.calendar.exceptions import DatabaseBaseError
 from src.app.calendar.router import router as calendar_router
 
 
@@ -20,7 +17,7 @@ from src.app.calendar.router import router as calendar_router
 async def lifespan(app: FastAPI):
     setup_logging()
     await async_db.initialize_async_database()
-    await async_redis.check_redis_server_connection()
+    await redis_adapter.ping()
     yield
     await async_db.shutdown_async_database()
 

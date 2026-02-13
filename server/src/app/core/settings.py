@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     APP_FRONTEND_BASE_URL: HttpUrl
 
-    SESSION_TTL: int
+    USER_SESSION_TTL: int
 
     DB_SQLITE_URL: str
     DB_SQLITE_JOURNAL_MODE: str
@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     DB_REDIS_HOST: str
     DB_REDIS_PORT: int
     DB_REDIS_DECODE_RESPONSES: bool
-    DB_REDIS_KEY_PREFIX_SESSION: str
+    DB_REDIS_KEY_PREFIX_USER_SESSION: str
     DB_REDIS_KEY_JWKS: str
     DB_REDIS_TTL_JWKS: int
 

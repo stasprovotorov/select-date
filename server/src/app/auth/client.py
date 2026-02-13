@@ -5,7 +5,7 @@ from aiohttp import TCPConnector, ClientSession
 import redis
 
 from src.app.core.settings import Environment, settings
-from src.app.core.redis import async_redis
+from src.app.core.redis import redis_adapter
 from src.app.core import exceptions
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ async def fetch_jwks() -> dict:
     jwks_from_redis = None
 
     try:
-        jwks_from_redis = await async_redis.client.get(settings.DB_REDIS_KEY_JWKS)
+        jwks_from_redis = await redis_adapter.get(settings.DB_REDIS_KEY_JWKS)
         logger.info("Retrieved JWKS from Redis.")
     except redis.ConnectionError as error:
         logger.warning("Failed to retrieve JWKS from Redis: no connection to the server.")
@@ -84,10 +84,10 @@ async def fetch_jwks() -> dict:
     jwks_json_str = json.dumps(jwks_dict, ensure_ascii=False)
 
     try:
-        await async_redis.client.set(
-            name=settings.DB_REDIS_KEY_JWKS, 
+        await redis_adapter.set(
+            key=settings.DB_REDIS_KEY_JWKS, 
             value=jwks_json_str, 
-            ex=settings.DB_REDIS_TTL_JWKS
+            ttl=settings.DB_REDIS_TTL_JWKS,
         )
         logger.info("JWKS stored in Redis.")
     except redis.ConnectionError as error:

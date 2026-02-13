@@ -1,32 +1,36 @@
+import json
 import logging
 import secrets
 
 from fastapi import Depends, Query, Cookie
 
-from src.app.auth.sessions import SessionService, session_service
 from src.app.auth.client import fetch_jwks, fetch_token
 from src.app.auth.service import validate_jwt
+from src.app.auth.service import UserSessionService, user_session_service
 from src.app.core import exceptions
+
+from src.app.auth.schemas import UserSessionSchema
 
 logger = logging.getLogger(__name__)
 
 
-async def get_session_service() -> SessionService:
-    return session_service
+async def get_user_session_service() -> UserSessionService:
+    return user_session_service
 
 
 async def require_auth(
     session_id: str | None = Cookie(None), 
-    session_service: SessionService = Depends(get_session_service)
+    user_session_service: UserSessionService = Depends(get_user_session_service)
 ) -> dict:
     if not session_id:
-        logger.warning("Session ID not provided in the cookie.")
-        raise exceptions.BadRequestError("Session ID not found.")
+        logger.warning("User session ID not provided in cookie")
+        raise exceptions.BadRequestError("User session ID not found")
 
-    session = await session_service.get_session(session_id)
-    user = session["user"]
+    user_session: UserSessionSchema = await user_session_service.get_user_session(session_id)
+    user = user_session.user
+    user = json.loads(user)
 
-    logger.info(f"User successfully authenticated: session_id={session_id}.")
+    logger.info(f"User authenticated")
     return user
 
 

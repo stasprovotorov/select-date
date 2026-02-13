@@ -1,9 +1,10 @@
-import time
+from datetime import datetime
+
 from pydantic import BaseModel
-from src.app.core.settings import settings
 
 
-class Session(BaseModel):
-    user: dict
-    created_at: int = int(time.time())
-    expires_at: int = created_at + settings.SESSION_TTL
+class UserSessionSchema(BaseModel):
+    id: str
+    user: str
+    created_at: datetime
+    expires_at: datetime
