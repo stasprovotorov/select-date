@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.app.core.logs import setup_logging
+from src.app.core.logging_config import logging_config
 from src.app.core.database import db
 from src.app.core.redis import redis_adapter
 from src.app.core.settings import settings
@@ -15,7 +15,7 @@ from src.app.calendar.router import router as calendar_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    setup_logging()
+    logging_config()
     await db.initialize_database()
     await redis_adapter.ping()
     yield
