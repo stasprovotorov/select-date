@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     APP_FRONTEND_BASE_URL: HttpUrl
 
+    LOGGING_LEVEL: int
+
     USER_SESSION_TTL: int
 
     DB_SQLITE_URL: str
