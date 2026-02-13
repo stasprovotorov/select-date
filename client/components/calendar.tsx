@@ -79,6 +79,7 @@ export default function Calendar() {
           storedDates.push(selectedDate)
         }
         setSelectedDates(storedDates)
+        saveDatesToStorage(storedDates)
         return
       }
 
