@@ -3,11 +3,11 @@ import logging
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-from src.app.core.settings import settings
+from src.app.core.config import settings
 from src.app.core.models import Base
 
 # Side effect imports for Base.metadata.create_all execution
-from src.app.auth.models import UserSessionTable
+from src.app.auth.models import SessionModel
 from src.app.calendar.models import SelectedDateModel
 
 logger = logging.getLogger(__name__)

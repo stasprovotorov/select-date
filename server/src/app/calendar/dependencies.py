@@ -1,6 +1,9 @@
-from src.app.calendar.repository import SqlAlchemyCalendarRepository
-from src.app.core.database import db
+from src.app.calendar.repository import CalendarSQLAlchemyRepository, calendar_repo
+from src.app.calendar.service import CalendarService, calendar_service
 
 
-async def get_sqlalchemy_repository() -> SqlAlchemyCalendarRepository:
-    return SqlAlchemyCalendarRepository(async_session=db.sessionmaker)
+def get_calendar_repo() -> CalendarSQLAlchemyRepository:
+    return calendar_repo
+
+def get_calendar_service() -> CalendarService:
+    return calendar_service

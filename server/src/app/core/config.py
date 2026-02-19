@@ -1,5 +1,5 @@
 from enum import Enum
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 from pathlib import Path
 
 from pydantic import HttpUrl, SecretStr, Field, model_validator
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     LOGGING_LEVEL: int
 
-    USER_SESSION_TTL: int
+    SESSION_TTL: int
 
     DB_SQLITE_URL: str
     DB_SQLITE_JOURNAL_MODE: str
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     DB_REDIS_HOST: str
     DB_REDIS_PORT: int
     DB_REDIS_DECODE_RESPONSES: bool
-    DB_REDIS_KEY_PREFIX_USER_SESSION: str
+    DB_REDIS_KEY_PREFIX_SESSION: str
     DB_REDIS_KEY_JWKS: str
     DB_REDIS_TTL_JWKS: int
 
@@ -58,10 +58,11 @@ class Settings(BaseSettings):
     AUTH0_JWKS_URL: str | None = None
     AUTH0_LOGOUT_URL: str | None = None
     AUTH0_REDIRECT_URI: str | None = None
+    AUTH0_LOGOUT_URI: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=f"{BACKEND_ROOT_DIRECTORY}/.env",
-        env_file_encoding="utf-8"
+        env_file_encoding="utf-8",
     )
 
     @model_validator(mode="after")
@@ -69,8 +70,9 @@ class Settings(BaseSettings):
         self.AUTH0_TOKEN_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_TOKEN_PATH)
         self.AUTH0_AUTHORIZE_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_AUTHORIZE_PATH)
         self.AUTH0_JWKS_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_JWKS_PATH)
-        self.AUTH0_LOGOUT_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_LOGOUT_PATH)
         self.AUTH0_REDIRECT_URI = urljoin(self.APP_BACKEND_BASE_URL.encoded_string(), f"{self.APP_BACKEND_API_PATH}{self.AUTH0_REDIRECT_PATH}")
+        self.AUTH0_LOGOUT_URL = urljoin(self.AUTH0_DOMAIN.encoded_string(), self.AUTH0_LOGOUT_PATH)
+        self.AUTH0_LOGOUT_URI = f"{self.AUTH0_LOGOUT_URL}?{urlencode({"client_id": self.AUTH0_CLIENT_ID, "returnTo": self.APP_FRONTEND_BASE_URL})}"
         return self
 
 

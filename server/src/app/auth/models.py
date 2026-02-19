@@ -6,8 +6,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.app.core.models import Base
 
 
-class UserSessionTable(Base):
-    __tablename__ = "user_session"
+class SessionModel(Base):
+    __tablename__ = "sessions"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     user: Mapped[str] = mapped_column(JSON)

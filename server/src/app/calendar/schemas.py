@@ -1,6 +1,5 @@
 from datetime import date
 from enum import Enum
-from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -10,52 +9,24 @@ class DateOperationType(str, Enum):
 
 
 class DateItemSchema(BaseModel):
-    calendar_date: date = Field(
-        ...,
-        alias="calendarDate", 
-        description="Calendar date in ISO format (YYYY-MM-DD)."
-    )
-    color_bg: str = Field(
-        ...,
-        alias="colorBg", 
-        description="Background color used to render the calendar cell."
-    )
-    color_text: str = Field(
-        ...,
-        alias="colorText", 
-        description="Text color used for the date label."
-    )
+    calendar_date: date = Field(alias="calendarDate")
+    color_bg: str = Field(alias="colorBg")
+    color_text: str = Field(alias="colorText")
 
     model_config = {
         "populate_by_name": True
     }
 
 
-class DatesByUserSchema(BaseModel):
-    ok: bool = Field(
-        ...,
-        description="True if the fetch dates by user succeeded, False otherwise."
-    )
-    item: list[DateItemSchema] = Field(
-        default=[],
-        description="List of dates for the user (empty list if none)."
-    )
-    message: Optional[str] = Field(
-        default=None,
-        description="Error description, present if the fetch dates by user failed."
-    )
+class DatesForUserSchema(BaseModel):
+    ok: bool
+    item: list[DateItemSchema] = []
+    message: str | None = None
 
 
 class DateOperationSchema(BaseModel):
-    oper_type: DateOperationType = Field(
-        ...,
-        alias="operType", 
-        description="Operation type for the date item: 'insert' to add/update, 'delete' to remove."
-    )
-    item: DateItemSchema = Field(
-        ...,
-        description="The date item the operation applies to."
-    )
+    oper_type: DateOperationType = Field(alias="operType")
+    item: DateItemSchema
 
     model_config = {
         "populate_by_name": True
@@ -63,38 +34,16 @@ class DateOperationSchema(BaseModel):
 
 
 class DateBatchRequestSchema(BaseModel):
-    batch: list[DateOperationSchema] = Field(
-        ...,
-        min_length=1,
-        description="List of date items to process in a single batch. Must contain at least one item."
-    )
+    batch: list[DateOperationSchema] = Field(min_length=1)
 
 
 class DateOperationResultSchema(BaseModel):
-    ok: bool = Field(
-        ...,
-        description="True if the operation succeeded, False otherwise."
-    )
-    operation: DateOperationSchema = Field(
-        ...,
-        description="The date operation that was applied. Includes the operation type and the date item."
-    )
-    message: Optional[str] = Field(
-        default=None,
-        description="Error description, present if the operation failed."
-    )
+    ok: bool
+    operation: DateOperationSchema
+    message: str | None = Field(None)
 
 
 class DateBatchResponseSchema(BaseModel):
-    ok: bool = Field(
-        ...,
-        description="True if the HTTP request succeeded (received a 2xx response), False otherwise."
-    )
-    result: Optional[list[DateOperationResultSchema]] = Field(
-        default=None,
-        description="List of results for individual date operations."
-    )
-    message: Optional[str] = Field(
-        default=None,
-        description="Error description, present if the HTTP request failed."
-    )
+    ok: bool
+    result: list[DateOperationResultSchema] | None = Field(None)
+    message: str | None = Field(None)

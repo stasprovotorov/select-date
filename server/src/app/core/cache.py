@@ -2,7 +2,7 @@ import logging
 
 from redis.asyncio import Redis, ConnectionError
 
-from src.app.core.settings import settings
+from src.app.core.config import settings
 from src.app.core import exceptions
 
 logger = logging.getLogger(__name__)
@@ -31,9 +31,9 @@ class RedisAdapter:
             raise exceptions.ServiceUnavailableError("Redis unavailable") from err
     
     async def get(self, key: str) -> str | None:
+        logger.info("Retrieving value from Redis")
         try:
             value: str = await self.redis_client.get(key)
-            logger.info("Retrieved value from Redis")
             return value
         except ConnectionError as err:
             logger.exception("Failed to get value from Redis")

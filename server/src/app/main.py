@@ -6,8 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.app.core.logging_config import logging_config
 from src.app.core.database import db
-from src.app.core.redis import redis_adapter
-from src.app.core.settings import settings
+from src.app.core.cache import redis_adapter
+from src.app.core.config import settings
 from src.app.core.exceptions import ApplicationBaseError
 from src.app.auth.router import router as auth_router
 from src.app.calendar.router import router as calendar_router

@@ -6,12 +6,12 @@ from sqlalchemy import select, insert, delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
 
-from src.app.auth.schemas import UserSessionSchema
-from src.app.auth.models import UserSessionTable
+from src.app.auth.schemas import SessionSchema
+from src.app.auth.models import SessionModel
 from src.app.core.database import db
 from src.app.core.cache import redis_adapter
 from src.app.core import exceptions
-from src.app.core.settings import settings
+from src.app.core.config import settings
 
 if TYPE_CHECKING:
     from src.app.core.cache import RedisAdapter
@@ -19,170 +19,170 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class UserSessionSQLAlchemyRepository:
-    def __init__(self, db_session_maker: async_sessionmaker) -> None:
-        self.db_session_maker = db_session_maker
+class SessionSQLAlchemyRepository:
+    def __init__(self, db_sessionmaker: async_sessionmaker) -> None:
+        self.db_sessionmaker = db_sessionmaker
 
     @staticmethod
-    def _mask_user_session_id(user_session_id: str) -> str:
-        mask = "*" * (len(user_session_id) - 8)
-        return user_session_id[:4] + mask + user_session_id[-4:]
+    def _mask_sid(sid: str) -> str:
+        mask = "*" * (len(sid) - 8)
+        return sid[:4] + mask + sid[-4:]
 
-    async def select_user_session(self, user_session_id: str) -> UserSessionSchema:
-        masked_sid = self._mask_user_session_id(user_session_id)
+    async def select_session(self, sid: str) -> SessionSchema:
+        masked_sid = self._mask_sid(sid)
 
         try:
-            async with self.db_session_maker() as db_session:
+            async with self.db_sessionmaker() as db_session:
                 db_session: AsyncSession
 
                 statement = (
-                    select(UserSessionTable.__table__)
-                    .where(UserSessionTable.id == user_session_id)
+                    select(SessionModel.__table__)
+                    .where(SessionModel.id == sid)
                 )
                 execution_result = await db_session.execute(statement)
-                selected_user_session = execution_result.mappings().first()
+                selected_session = execution_result.mappings().first()
 
-            if not selected_user_session:
+            if not selected_session:
                 raise exceptions.NotFoundError("User session with given ID was not found in database")
 
-            logger.info("Retrieved user session from database: sid=%s", masked_sid)
-            return UserSessionSchema(**selected_user_session)
+            logger.info("Retrieved user session from database: sid = %s", masked_sid)
+            return SessionSchema(**selected_session)
         except exceptions.NotFoundError:
-            logger.exception("User session with given ID was not found: sid=%s", masked_sid)
+            logger.exception("User session with given ID was not found: sid = %s", masked_sid)
             raise
         except OperationalError as err:
-            logger.exception("Failed to retrieve user session from database: sid=%s", masked_sid)
+            logger.exception("Failed to retrieve user session from database: sid = %s", masked_sid)
             raise exceptions.ServiceUnavailableError("Database unavailable") from err
         except SQLAlchemyError as err:
             logger.exception("Unexpected database error")
             raise exceptions.NotImplementedError("Unexpected database error")
 
-    async def insert_user_session(self, user_session: UserSessionSchema) -> UserSessionSchema:
-        masked_sid = self._mask_user_session_id(user_session.id)
+    async def insert_session(self, session: SessionSchema) -> SessionSchema:
+        masked_sid = self._mask_sid(session.id)
 
         try:
-            async with self.db_session_maker() as db_session:
+            async with self.db_sessionmaker() as db_session:
                 db_session: AsyncSession
 
                 statement = (
-                    insert(UserSessionTable.__table__)
+                    insert(SessionModel.__table__)
                     .values(
-                        id=user_session.id, 
-                        user=user_session.user,
-                        created_at=user_session.created_at, 
-                        expires_at=user_session.expires_at,
+                        id=session.id, 
+                        user=session.user,
+                        created_at=session.created_at, 
+                        expires_at=session.expires_at,
                     )
-                    .returning(UserSessionTable.__table__.columns)
+                    .returning(SessionModel.__table__.columns)
                 )
 
                 execution_result = await db_session.execute(statement)
-                inserted_user_session = execution_result.mappings().first()
+                inserted_session = execution_result.mappings().first()
                 await db_session.commit()
 
-            logger.info("Session stored in database: sid=%s", masked_sid)
-            return UserSessionSchema(**inserted_user_session)
+            logger.info("Session stored in database: sid = %s", masked_sid)
+            return SessionSchema(**inserted_session)
         except OperationalError as err:
-            logger.exception("Failed to store user session in database: sid=%s", masked_sid)
+            logger.exception("Failed to store session in database: sid = %s", masked_sid)
             raise exceptions.ServiceUnavailableError("Database unavailable") from err
         except IntegrityError as err:
-            logger.exception("User session with given ID already exists: sid=%s", masked_sid)
-            raise exceptions.UnauthorizedError("Failed to create user session in database") from err
+            logger.exception("Session with given ID already exists: sid = %s", masked_sid)
+            raise exceptions.UnauthorizedError("Failed to create session in database") from err
         except SQLAlchemyError as err:
             logger.exception("Unexpected database error")
             raise exceptions.NotImplementedError("Unexpected database error")
 
-    async def delete_user_session(self, user_session_id: str) -> UserSessionSchema:
-        masked_sid = self._mask_user_session_id(user_session_id)
+    async def delete_session(self, sid: str) -> SessionSchema:
+        masked_sid = self._mask_sid(sid)
 
         try:
-            async with self.db_session_maker() as db_session:
+            async with self.db_sessionmaker() as db_session:
                 db_session: AsyncSession
 
                 statement = (
-                    delete(UserSessionTable.__table__)
-                    .where(UserSessionTable.id == user_session_id)
-                    .returning(UserSessionTable.__table__.columns)
+                    delete(SessionModel.__table__)
+                    .where(SessionModel.id == sid)
+                    .returning(SessionModel.__table__.columns)
                 )
                 execution_result = await db_session.execute(statement)
-                deleted_user_session = execution_result.mappings().first()
+                deleted_session = execution_result.mappings().first()
 
-                if not deleted_user_session:
-                    raise exceptions.NotFoundError("User session with given ID was not found in database")
+                if not deleted_session:
+                    raise exceptions.NotFoundError("Session with given ID was not found in database")
                 
                 await db_session.commit()
 
-            logger.info("Removed user session from database: sid=%s", masked_sid)
-            return UserSessionSchema(**deleted_user_session)
+            logger.info("Removed session from database: sid = %s", masked_sid)
+            return SessionSchema(**deleted_session)
         except exceptions.NotFoundError:
-            logger.exception("User session with given ID was not found: sid=%s", masked_sid)
+            logger.exception("Session with given ID was not found: sid = %s", masked_sid)
             raise
         except OperationalError as err:
-            logger.exception("Failed to remove user session in database: sid=%s", masked_sid)
+            logger.exception("Failed to remove session in database: sid = %s", masked_sid)
             raise exceptions.ServiceUnavailableError("Database unavailable") from err
         except SQLAlchemyError as err:
             logger.exception("Unexpected database error")
             raise exceptions.NotImplementedError("Unexpected database error")
 
 
-class UserSessionRedisRepository:
+class SessionRedisRepository:
     def __init__(self, redis_adapter: "RedisAdapter") -> None:
         self.redis = redis_adapter
 
     @staticmethod
-    def _get_user_session_key(user_session_id: str) -> str:
-        return f"{settings.DB_REDIS_KEY_PREFIX_USER_SESSION}:{user_session_id}"
+    def _get_session_key(sid: str) -> str:
+        return f"{settings.DB_REDIS_KEY_PREFIX_SESSION}:{sid}"
 
     @staticmethod
-    def _mask_user_session_id(user_session_id: str) -> str:
-        mask = "*" * (len(user_session_id) - 8)
-        return user_session_id[:4] + mask + user_session_id[-4:]
+    def _mask_session_id(sid: str) -> str:
+        mask = "*" * (len(sid) - 8)
+        return sid[:4] + mask + sid[-4:]
 
-    async def set_user_session(self, user_session: UserSessionSchema) -> bool:
-        user_session_key: str = self._get_user_session_key(user_session.id)
-        masked_sid = self._mask_user_session_id(user_session.id)
+    async def set_session(self, session: SessionSchema) -> bool:
+        session_key: str = self._get_session_key(session.id)
+        masked_sid = self._mask_session_id(session.id)
 
         try:
             result: bool = await self.redis.set(
-                key=user_session_key, 
-                value=user_session.model_dump_json(), 
-                ttl=settings.USER_SESSION_TTL,
+                key=session_key, 
+                value=session.model_dump_json(), 
+                ttl=settings.SESSION_TTL,
             )
-            logger.info("Session stored in cache: sid=%s", masked_sid)
+            logger.info("Session stored in cache: sid = %s", masked_sid)
             return result
         except Exception:
-            logger.exception("Failed to store session in cache: sid=%s", masked_sid)
+            logger.exception("Failed to store session in cache: sid = %s", masked_sid)
             raise
 
-    async def get_user_session(self, user_session_id: str) -> UserSessionSchema | None:
-        user_session_key: str = self._get_user_session_key(user_session_id)
-        masked_sid = self._mask_user_session_id(user_session_id)
+    async def get_session(self, sid: str) -> SessionSchema | None:
+        session_key: str = self._get_session_key(sid)
+        masked_sid = self._mask_session_id(sid)
 
         try:
-            user_session: str = await self.redis.get(user_session_key)
+            session: str = await self.redis.get(session_key)
 
-            if not user_session:
+            if not session:
                 return None
             
-            user_session = json.loads(user_session)
-            logger.info("Retrieved session from cache: sid=%s", masked_sid)
-            return UserSessionSchema(**user_session)
+            session = json.loads(session)
+            logger.info("Retrieved session from cache: sid = %s", masked_sid)
+            return SessionSchema(**session)
         except Exception:
-            logger.exception("Failed to retrieve session from cache: sid=%s", masked_sid)
+            logger.exception("Failed to retrieve session from cache: sid = %s", masked_sid)
             raise
 
-    async def delete_user_session(self, user_session_id: str) -> bool:
-        user_session_key: str = self._get_user_session_key(user_session_id)
-        masked_sid: str = self._mask_user_session_id(user_session_id)
+    async def delete_session(self, sid: str) -> bool:
+        session_key: str = self._get_session_key(sid)
+        masked_sid: str = self._mask_session_id(sid)
 
         try:
-            result: bool = await self.redis.delete(user_session_key)
+            result: bool = await self.redis.delete(session_key)
             if not result:
                 raise exceptions.NotFoundError("Session was not found in cache")
             return result
         except Exception:
-            logger.exception("Failed to remove session from cache: sid=%s", masked_sid)
+            logger.exception("Failed to remove session from cache: sid = %s", masked_sid)
             raise
 
 
-user_session_db_repo = UserSessionSQLAlchemyRepository(db_session_maker=db.sessionmaker)
-user_session_cache_repo = UserSessionRedisRepository(redis_adapter=redis_adapter)
+session_db_repo = SessionSQLAlchemyRepository(db_sessionmaker=db.sessionmaker)
+session_cache_repo = SessionRedisRepository(redis_adapter=redis_adapter)
