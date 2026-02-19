@@ -26,7 +26,7 @@ async def fetch_jwt(code: str) -> dict:
     async with ClientSession(connector=connector) as session:
         async with session.post(settings.AUTH0_TOKEN_URL, headers=headers, data=request_body) as response:
             if response.status != 200:
-                logger.error("Failed to retrieve JWT from Auth0: response code = %s", response.status)
+                logger.error("Failed to retrieve JWT from Auth0 API: response_code=%s", response.status)
                 raise exceptions.ServiceUnavailableError(f"Unsuccessful request to Auth0 API: response code = {response.status}")
 
             try:
@@ -68,8 +68,8 @@ async def fetch_jwks() -> dict:
     async with ClientSession(connector=connector) as session:
         async with session.get(settings.AUTH0_JWKS_URL) as response:
             if response.status != 200:
-                logger.error("Failed to retrieve JWKS from Auth0: response_code=%s", response.status)
-                raise exceptions.ServiceUnavailableError("Unsuccessful response code %s from Auth0", response.status)
+                logger.error("Failed to retrieve JWKS from Auth0 API: response_code=%s", response.status)
+                raise exceptions.ServiceUnavailableError(f"Unsuccessful response code {response.status} from Auth0")
             
             try:
                 jwks = await response.json()

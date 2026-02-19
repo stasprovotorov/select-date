@@ -19,7 +19,7 @@ class CalendarSQLAlchemyRepository:
     async def process_batch(self, user_id: str, batch: list[DateOperationSchema]) -> list[DateOperationResultSchema]:
         batch_results: list[DateOperationResultSchema] = []
 
-        logger.info("Start batch processing: operation count = %s", len(batch))
+        logger.info("Start batch processing: operation_count=%s", len(batch))
         async with self.db_sessionmaker.begin() as db_session:
             db_session: AsyncSession
 
@@ -115,7 +115,7 @@ class CalendarSQLAlchemyRepository:
                     color_text=date_row.color_text,
                 )
                 dates.append(date_item)
-            logger.info("Successfully retrieved dates for user: dates count = %s", len(dates))
+            logger.info("Successfully retrieved dates for user: date_count=%s", len(dates))
         else:
             logger.info("Dates were not found for user")
 
