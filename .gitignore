@@ -27,8 +27,10 @@
 /client/next-env.d.ts
 
 # server
+__pycache__/
 /server/.venv
 /server/.env
-/server/__pycache__
-/server/src/__pycache__
-/server/src/database.db
+/server/database.db
+/server/database.db-shm
+/server/database.db-wal
+/server/dump.rdb

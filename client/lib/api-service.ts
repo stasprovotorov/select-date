@@ -1,50 +1,93 @@
-import { type DateBatchItem } from "@/app/api/hooks/use-debounce-batch"
+import { getErrorMessage } from "./utils"
 
-export type ApiDateItemResult = {
-  ok: boolean
-  action: "select" | "deselect"
-  date: string
-  color?: string
-  textColor?: string
-  message?: string
-}
+const CLIENT_API_URL = process.env.NEXT_PUBLIC_CLIENT_API_URL ?? "/api/v1"
 
-export type ApiDateBatchResult = 
- | { ok: true; results: ApiDateItemResult[]; message?: string }
- | { ok: false; message: string }
+export type DateItem = { calendarDate: string, colorBg: string, colorText: string }
+export type DateOperation = { operType: "insert" | "delete", item: DateItem }
+export type DateBatchRequest = { batch: DateOperation[] }
 
-export async function sendDateBatchToApi(dateBatch: DateBatchItem[]): Promise<ApiDateBatchResult> {
-  const payload = dateBatch.map((dateItem) => ({
-    action: dateItem.action,
-    date: dateItem.date,
-    color: dateItem.action === "select" ? dateItem.color : undefined,
-    textColor: dateItem.action === "select" ? dateItem.textColor : undefined
-  }))
+export type DateOperationResult = 
+  | { ok: true, operation: DateOperation }
+  | { ok: false, operation: DateOperation, message: string }
 
-  const bodyReq = JSON.stringify(payload)
+export type DateBatchResponse = 
+  | { ok: true, result: DateOperationResult[], message?: string }
+  | { ok: false, message: string }
+
+export async function sendDateBatch(dateBatch: DateBatchRequest): Promise<DateBatchResponse> {
+  const url = `${CLIENT_API_URL}/dates/batch`
+  const reqBody = JSON.stringify(dateBatch)
 
   try {
-    const response = await fetch("api/calendar/batch", {
+    const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json"},
-      body: bodyReq,
+      headers: { "Content-Type": "application/json" },
+      body: reqBody,
       keepalive: true
     })
 
-    if (!response.ok) {
-      return { ok: false, message: `HTTP ${response.status}`}
+    if (!res.ok) {
+      return { ok: false, message: "The request to submit the batch of items with dates failed." }
     }
 
-    let bodyRes: ApiDateBatchResult
     try {
-      bodyRes = await response.json()
+      const resBody = await res.json()
+
+      return resBody
     } catch {
-      return { ok: false, message: "Invalid JSON from server API"}
+      return { ok: false, message: "Failed to parse response body as JSON from the server." }
+    }
+  } catch (err) {
+    const message = getErrorMessage(err)
+    return { ok: false, message }
+  }
+}
+
+export type DateByUserResponse = 
+  | { ok: true, item: DateItem[] }
+  | { ok: false, message: string }
+
+export async function getDateByUser(): Promise<DateByUserResponse> {
+  const url = `${CLIENT_API_URL}/users/me/dates`
+
+  try {
+    const res = await fetch(url, { method: "GET" })
+    
+    if (!res.ok) {
+      return { ok: false, message: "Failed to retrieve the user's date items." }
+    }
+  
+    try {
+      const body = await res.json()
+      return body
+    } catch {
+      return { ok: false, message: "Failed to parse response body as JSON from the server." }
+    }
+    
+  } catch (err) {
+    const message = getErrorMessage(err)
+    return { ok: false, message }
+  }
+}
+
+type isUserResponse = 
+  | { ok: true }
+  | { ok: false, message: string }
+
+export async function isUserAuthenticated(): Promise<isUserResponse> {
+  const url = `${CLIENT_API_URL}/auth/me`
+
+  try {
+    const res = await fetch(url, { credentials: "include" })
+
+    if (res.ok) {
+      return { ok: true }
+    } else {
+      return { ok: false, message: "User is not authenticated." }
     }
 
-    return bodyRes
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    const message = getErrorMessage(err)
     return { ok: false, message }
   }
 }

@@ -12,7 +12,7 @@ export function toStrIsoDate(year: number, month: number, day: number): string {
   return `${yearStr}-${monthStr}-${dayStr}`
 }
 
-type DateParts = { year: number; month: number; day: number }
+type DateParts = { year: number, month: number, day: number }
 
 export function parseIsoDate(isoDate: string): DateParts {
   const [yearStr, monthStr, dayStr] = isoDate.split("-")
@@ -20,4 +20,14 @@ export function parseIsoDate(isoDate: string): DateParts {
   const month = Number(monthStr)
   const day = Number(dayStr)
   return { year, month, day}
+}
+
+export function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === "string") return err
+  try {
+    return JSON.stringify(err)
+  } catch {
+    return String(err)
+  }
 }

@@ -1,14 +1,17 @@
-import Calendar from "@/components/calendar";
-import AuthGate from "@/components/AuthGate";
-import SignOutButton from "@/components/auth-buttons";
+import Calendar from "@/components/calendar"
+import Auth from "@/components/auth"
+import SignOutButton from "@/components/auth-buttons"
+import Sync from "@/components/sync"
 
 export default function Home() {
   return (
-    <AuthGate>
-      <main>
-        <SignOutButton />
-        <Calendar />
-      </main>
-    </AuthGate>
+    <Auth>
+      <Sync>
+        <main>
+          <SignOutButton />
+          <Calendar />
+        </main>
+      </Sync>
+    </Auth>
   );
 }
