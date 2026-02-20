@@ -28,8 +28,8 @@ class SQLiteAsyncDatabase:
             statement = text(journal_mode)
             logger.info("Executing statement: %s", journal_mode)
             await connection.execute(statement)
-            logger.info("Creating tables")
-            await connection.run_sync(Base.metadata.create_all)
+            # logger.info("Creating tables")
+            # await connection.run_sync(Base.metadata.create_all)
 
         logger.info("Database initialization finished")
 
