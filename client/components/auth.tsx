@@ -5,7 +5,8 @@ import { AuthContext, type AuthState } from "./auth-context"
 import { isUserAuthenticated } from "@/lib/api-service"
 import loadingMessage from "./ui/loading-message"
 
-const SERVER_API_URL = process.env.SERVER_API_URL ?? "http://localhost:8000/api/v1"
+const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "http://localhost:8000"
+const SERVER_API_URL = `${SERVER_BASE_URL}${process.env.NEXT_PUBLIC_SERVER_API_URL}`
 
 export default function Auth({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({ isAuthenticated: false })
