@@ -5,6 +5,7 @@ import { parseIsoDate, getErrorMessage } from "../../../lib/utils"
 
 type DateBuffer = { countForDate: number; lastDate: DateOperation }
 type DateRollback = { operType: "insert" | "delete", selectedDate: SelectedDate }
+type DateBatchResult = { res: DateBatchResponse, sentBatch: DateOperation[] }
 
 type useDebounceOptions = {
   delay: number
@@ -37,23 +38,24 @@ export function useDebounce({ delay, maxBatchSize, clearBufferOnBeforeUnload, ba
     }
   }, [])
 
-  const flushBufferAndSend = useCallback((): DateBatchResponse | Promise<DateBatchResponse> => {
+  const flushBufferAndSend = useCallback((): DateBatchResult | Promise<DateBatchResult> => {
     clearTimer()
     buildBatchFromBuffer()
 
     if (batchRef.current.length === 0) {
       const message = "Batch is empty after building. Nothing to send to the API."
-      return { ok: true, result: [], message }
+      return { res: { ok: true, result: [], message }, sentBatch: [] }
     }
     
-    const batch: DateBatchRequest = { batch: batchRef.current }
+    const batchToSend = batchRef.current.slice()
+    const batch: DateBatchRequest = { batch: batchToSend }
     const sendBatch = batchSenderRef.current
 
-    async function doSendBatch() {
+    async function doSendBatch(): Promise<DateBatchResult> {
       try {
         const res = await sendBatch(batch)
         if (res.ok) bufferRef.current.clear()
-        return res
+        return { res, sentBatch: batchToSend }
       } catch (err) {
         const message = getErrorMessage(err)
         throw new Error(`Failed to send batch request: ${message}`)
@@ -63,7 +65,7 @@ export function useDebounce({ delay, maxBatchSize, clearBufferOnBeforeUnload, ba
     return doSendBatch()
   }, [buildBatchFromBuffer, clearTimer])
 
-  const scheduleFlushBufferAndSend = useCallback(async (): Promise<DateBatchResponse> => {
+  const scheduleFlushBufferAndSend = useCallback(async (): Promise<DateBatchResult> => {
     clearTimer()
 
     return new Promise((resolve, reject) => {
@@ -83,7 +85,7 @@ export function useDebounce({ delay, maxBatchSize, clearBufferOnBeforeUnload, ba
   }, [clearTimer, delay, flushBufferAndSend])
 
   const bufferDateAndSend = useCallback(
-    (dateOper: DateOperation): DateBatchResponse | Promise<DateBatchResponse> => { 
+    (dateOper: DateOperation): DateBatchResult | Promise<DateBatchResult> => { 
       const keyDate = dateOper.item.calendarDate
       const dateExistBuffer = bufferRef.current.get(keyDate)
 
@@ -108,11 +110,12 @@ export function useDebounce({ delay, maxBatchSize, clearBufferOnBeforeUnload, ba
     }, [maxBatchSize, flushBufferAndSend, scheduleFlushBufferAndSend]
   )
 
-  const buildToRollback = useCallback((res: DateBatchResponse): Array<DateRollback> => {
+  const buildToRollback = useCallback((res: DateBatchResponse, sentBatch: DateOperation[]): Array<DateRollback> => {
       let toRollback = []
+      let sentDates: string[] = sentBatch.map(oper => oper.item.calendarDate)
 
       if (!res.ok) {
-        for (const dateOper of batchRef.current) {
+        for (const dateOper of sentBatch) {
           const dateItem = dateOper.item
           const { year, month, day } = parseIsoDate(dateItem.calendarDate)
 
@@ -131,17 +134,21 @@ export function useDebounce({ delay, maxBatchSize, clearBufferOnBeforeUnload, ba
           if (!dateOperRes.ok) {
             const dateOper = dateOperRes.operation
             const dateItem = dateOper.item
-            const { year, month, day } = parseIsoDate(dateItem.calendarDate)
 
-            const toRollbackItem: SelectedDate = {
-              year: year,
-              monthIndex: month - 1,
-              day: day,
-              colorBg: dateItem.colorBg,
-              colorText: dateItem.colorText
+            if (sentDates.includes(dateItem.calendarDate)) {
+              
+              const { year, month, day } = parseIsoDate(dateItem.calendarDate)
+
+              const toRollbackItem: SelectedDate = {
+                year: year,
+                monthIndex: month - 1,
+                day: day,
+                colorBg: dateItem.colorBg,
+                colorText: dateItem.colorText
+              }
+
+              toRollback.push({ operType: dateOper.operType, selectedDate: toRollbackItem })
             }
-
-            toRollback.push({ operType: dateOper.operType, selectedDate: toRollbackItem })
           }
         }
       }

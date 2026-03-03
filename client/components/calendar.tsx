@@ -107,8 +107,10 @@ export default function Calendar() {
   }
 
   const toggleDate = async (month: number, day: number) => {
+    const snapshotSelectedDates: SelectedDate[] = selectedDates.slice()
+
     if (!isBuffering.current) {
-      prevSelectedDatesRef.current = [...selectedDates]
+      prevSelectedDatesRef.current = snapshotSelectedDates.slice()
       isBuffering.current = true
     }
     
@@ -124,15 +126,18 @@ export default function Calendar() {
       (date) => date.year === currentYear && date.monthIndex === month && date.day === day
     )
 
-    let newSelectedDates: SelectedDate[]
     let operType: "insert" | "delete"
+    let newSelectedDates: SelectedDate[]
+    let selectedDateForOper: SelectedDate
 
     if (existingDateIndex >= 0) {
       operType = "delete"
+      selectedDateForOper = snapshotSelectedDates[existingDateIndex]
       newSelectedDates = selectedDates.filter((_, index) => index !== existingDateIndex)
     } else {
       operType = "insert"
-      newSelectedDates = [...selectedDates, newDate]
+      selectedDateForOper = newDate
+      newSelectedDates = [...snapshotSelectedDates, newDate]
     }
 
     setSelectedDates(newSelectedDates)
@@ -145,8 +150,8 @@ export default function Calendar() {
     }
 
     const dateOper: DateOperation = { operType, item: dateItem }
-    const apiDateResults = await bufferDateAndSend(dateOper)
-    const toRollbackDates = buildToRollback(apiDateResults)
+    const dateBateResult = await bufferDateAndSend(dateOper)
+    const toRollbackDates = buildToRollback(dateBateResult.res, dateBateResult.sentBatch)
 
     if (toRollbackDates.length !== 0) {
       let rollbackSelectedDates: SelectedDate[] = []
