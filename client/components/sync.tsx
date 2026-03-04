@@ -15,7 +15,18 @@ export default function Sync({ children }: SyncProps) {
   const { isAuthenticated } = useContext(AuthContext)
   const [dates, setDates] = useState<DateItem[] | null>(null)
   const [wasSynced, setWasSynced] = useState<boolean>(isCalendarSynced())
-  
+
+  useEffect(() => {
+    const onHide = () => {
+      setCalendarSynced(false)
+      setWasSynced(false)
+    }
+    window.addEventListener("pagehide", onHide)
+    return () => {
+      window.removeEventListener("pagehide", onHide)
+    }
+  }, [])
+
   useEffect(() => {
     if (!isAuthenticated) return
     if (wasSynced) return
