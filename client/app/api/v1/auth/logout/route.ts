@@ -1,5 +1,4 @@
-const SERVER_BASE_URL = process.env.NEXT_PUBLIC_SERVER_BASE_URL ?? "http://localhost:8000"
-const SERVER_API_URL = `${SERVER_BASE_URL}${process.env.NEXT_PUBLIC_SERVER_API_URL}`
+const SERVER_API_URL = process.env.SERVER_URL
 
 export async function POST(req: Request): Promise<Response> {
   const url = `${SERVER_API_URL}/auth/logout`

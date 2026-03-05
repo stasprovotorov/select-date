@@ -30,15 +30,11 @@ services:
     environment:
       DB_SQLITE_URL: "sqlite+aiosqlite:////data/database.db"
       DB_REDIS_HOST: "redis"
-      APP_BACKEND_BASE_URL: "http://${PUBLIC_IP}:8000"
-      APP_FRONTEND_BASE_URL: "http://${PUBLIC_IP}:3000"
 
   client:
     build:
       context: ./client
       dockerfile: Dockerfile
-      args:
-        PUBLIC_IP: "${PUBLIC_IP}"
     ports:
       - "3000:3000"
     env_file:
@@ -47,5 +43,3 @@ services:
 volumes:
   redisdata:
   server_db:
-
-
