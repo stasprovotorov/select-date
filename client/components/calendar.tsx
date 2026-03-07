@@ -1,8 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn, toStrIsoDate, parseIsoDate, getErrorMessage } from "@/lib/utils"
+import { sendDateBatch, DateItem, DateOperation } from "@/lib/api-service"
+import { useDebounce } from "@/app/api/hooks/use-debounce-batch"
+import { useSyncDates } from "./sync-context"
+
+const LOCAL_STORAGE_KEY = "calendar-selected-dates"
 
 const months = [
   "January",
@@ -32,66 +37,147 @@ const colorOptions = [
   { name: "Teal", value: "bg-teal-500 hover:bg-teal-600", textColor: "text-white" },
 ]
 
-interface SelectedDate {
+export type SelectedDate = {
   year: number
-  month: number
+  monthIndex: number
   day: number
-  color?: string // Added optional color property
-  textColor?: string // Added text color for contrast
+  colorBg: string
+  colorText: string
 }
 
 export default function Calendar() {
   const [selectedDates, setSelectedDates] = useState<SelectedDate[]>([])
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
-  const [selectedColor, setSelectedColor] = useState(colorOptions[0]) // Added selected color state
+  const [selectedColor, setSelectedColor] = useState(colorOptions[0])
+  const prevSelectedDatesRef = useRef<SelectedDate[]>([])
+  const serverDates = useSyncDates()
+  const isBuffering = useRef<Boolean>(false)
+
+  const { bufferRef, bufferDateAndSend, buildToRollback } = useDebounce({
+    delay: 700,
+    maxBatchSize: 50,
+    batchSender: sendDateBatch,
+    clearBufferOnBeforeUnload: true
+  })
 
   useEffect(() => {
     const loadDatesFromStorage = () => {
+      let storedDates: SelectedDate[] = []
+
+      if (serverDates !== null) {
+        for (const serverDate of serverDates) {
+          const { year, month, day } = parseIsoDate(serverDate.calendarDate)
+
+          const selectedDate: SelectedDate = {
+            year: year,
+            monthIndex: month - 1,
+            day,
+            colorBg: serverDate.colorBg,
+            colorText: serverDate.colorText
+          }
+
+          storedDates.push(selectedDate)
+        }
+        setSelectedDates(storedDates)
+        saveDatesToStorage(storedDates)
+        return
+      }
+
       try {
-        const storedDates = localStorage.getItem("calendar-selected-dates")
+        const storedDates = localStorage.getItem(LOCAL_STORAGE_KEY)
         if (storedDates) {
           const dates = JSON.parse(storedDates)
           setSelectedDates(dates)
         }
-      } catch (error) {
-        console.error("Error loading dates from localStorage:", error)
+      } catch (err) {
+        const message = getErrorMessage(err)
+        console.error(`Failed to load dates from localStorage: ${message}`)
       }
     }
-
     loadDatesFromStorage()
   }, [])
 
   const saveDatesToStorage = (dates: SelectedDate[]) => {
     try {
-      localStorage.setItem("calendar-selected-dates", JSON.stringify(dates))
-    } catch (error) {
-      console.error("Error saving dates to localStorage:", error)
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dates))
+    } catch (err) {
+      const message = getErrorMessage(err)
+      console.error(`Failed to save dates to localStorage: ${message}`)
     }
   }
 
-  const toggleDate = (month: number, day: number) => {
-    const existingDateIndex = selectedDates.findIndex(
-      (date) => date.year === currentYear && date.month === month && date.day === day,
-    )
+  const toggleDate = async (month: number, day: number) => {
+    const snapshotSelectedDates: SelectedDate[] = selectedDates.slice()
 
+    if (!isBuffering.current) {
+      prevSelectedDatesRef.current = snapshotSelectedDates.slice()
+      isBuffering.current = true
+    }
+    
     const newDate: SelectedDate = {
       year: currentYear,
-      month,
+      monthIndex: month,
       day,
-      color: selectedColor.value, // Store selected color with date
-      textColor: selectedColor.textColor, // Store text color for contrast
+      colorBg: selectedColor.value,
+      colorText: selectedColor.textColor,
     }
 
-    let newDates: SelectedDate[]
+    const existingDateIndex = selectedDates.findIndex(
+      (date) => date.year === currentYear && date.monthIndex === month && date.day === day
+    )
+
+    let operType: "insert" | "delete"
+    let newSelectedDates: SelectedDate[]
+    let selectedDateForOper: SelectedDate
 
     if (existingDateIndex >= 0) {
-      newDates = selectedDates.filter((_, index) => index !== existingDateIndex)
+      operType = "delete"
+      selectedDateForOper = snapshotSelectedDates[existingDateIndex]
+      newSelectedDates = selectedDates.filter((_, index) => index !== existingDateIndex)
     } else {
-      newDates = [...selectedDates, newDate]
+      operType = "insert"
+      selectedDateForOper = newDate
+      newSelectedDates = [...snapshotSelectedDates, newDate]
     }
 
-    setSelectedDates(newDates)
-    saveDatesToStorage(newDates)
+    setSelectedDates(newSelectedDates)
+    saveDatesToStorage(newSelectedDates)
+
+    const dateItem: DateItem = {
+      calendarDate: toStrIsoDate(newDate.year, newDate.monthIndex + 1, newDate.day),
+      colorBg: newDate.colorBg,
+      colorText: newDate.colorText
+    }
+
+    const dateOper: DateOperation = { operType, item: dateItem }
+    const dateBateResult = await bufferDateAndSend(dateOper)
+    const toRollbackDates = buildToRollback(dateBateResult.res, dateBateResult.sentBatch)
+
+    if (toRollbackDates.length !== 0) {
+      let rollbackSelectedDates: SelectedDate[] = []
+      const toAddDates: SelectedDate[] = []
+      const toRemoveDatesIndex = new Set()
+
+      for (const { operType, selectedDate } of toRollbackDates) {
+        if (operType === "insert") {
+          toRemoveDatesIndex.add(selectedDates.findIndex(
+            (date) => 
+              date.year === selectedDate.year && 
+              date.monthIndex === selectedDate.monthIndex && 
+              date.day === selectedDate.day
+          ))
+        } else if (operType === "delete") { 
+          toAddDates.push(selectedDate)
+        }
+      }
+
+      rollbackSelectedDates = prevSelectedDatesRef.current.filter((_, index) => !toRemoveDatesIndex.has(index))
+      rollbackSelectedDates.push(...toAddDates)
+
+      setSelectedDates(rollbackSelectedDates)
+      saveDatesToStorage(rollbackSelectedDates) 
+    }
+    isBuffering.current = false
   }
 
   const getDaysInMonth = (month: number, year: number) => {
@@ -104,11 +190,11 @@ export default function Calendar() {
   }
 
   const isDateSelected = (year: number, month: number, day: number) => {
-    return selectedDates.some((date) => date.year === year && date.month === month && date.day === day)
+    return selectedDates.some((date) => date.year === year && date.monthIndex === month && date.day === day)
   }
 
   const getSelectedDate = (year: number, month: number, day: number) => {
-    return selectedDates.find((date) => date.year === year && date.month === month && date.day === day)
+    return selectedDates.find((date) => date.year === year && date.monthIndex === month && date.day === day)
   }
 
   const renderMonth = (monthIndex: number) => {
@@ -131,8 +217,8 @@ export default function Calendar() {
           size="sm"
           className={cn(
             "h-12 w-12 p-0 font-normal transition-all duration-200 hover:scale-105 rounded-full",
-            isSelected && selectedDate?.color, // Apply stored color
-            isSelected && selectedDate?.textColor, // Apply stored text color
+            isSelected && selectedDate?.colorBg, // Apply stored color
+            isSelected && selectedDate?.colorText, // Apply stored text color
           )}
           onClick={() => toggleDate(monthIndex, day)}
         >

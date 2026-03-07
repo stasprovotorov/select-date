@@ -1,0 +1,45 @@
+services:
+  redis:
+    image: redis:7.2.0
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  migrate:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    volumes:
+      - server_db:/data
+    restart: "no"
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - server_db:/data
+    depends_on:
+      - redis
+      - migrate
+    environment:
+      DB_SQLITE_URL: "sqlite+aiosqlite:////data/database.db"
+      DB_REDIS_HOST: "redis"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./client/.env.local
+
+volumes:
+  redisdata:
+  server_db:
