@@ -1,30 +1,65 @@
-# Calendar website
+# Select Date 
+A calendar application where users can log in and mark dates using different colors.
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+This is a monorepo:
+- `client/` - Next.js frontend. Mostly generated with AI and integrated with backend by me (authorization, API routes, request debouncing)
+- `server/` - FastAPI backend. Fully implemented by me (authorization, persistence, migrations, cache and containerization)
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/eektheeeks-projects/v0-calendar-website)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/nsDiEWjZAFe)
+## Technical stack
+**Frontend**
+- Next.js
 
-## Overview
+**Backend**
+- Python, FastAPI
+- Auth0
+- SQLite database
+- SQLAlchemy + Alembic
+- Redis cache
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+## How to start
+### Auth0 setup
+1. Create an Auth0 account at https://auth0.com/
+2. Create an Auth0 Application (type: Regular Web Application)
+3. In the Auth0 Application settings, add:
+    - **Allowed Callback URLs**: `http://localhost:8000/api/v1/auth/login/callback`
+    - **Allowed Logout URLs**: `http://localhost:3000`
+    - **Allowed Web Origins**: `http://localhost:3000`
+4. Create an Auth0 API
+5. In the Auth0 API settings, set:
+    - **Name**: select-date (or any name you want)
+    - **Identifier**: any unique URL-like value, e.g. `https://select-date/api`
+    - **JSON Web Token (JWT) Signing Algorithm**: RS256
 
-## Deployment
+### Environment variables
+This project requires two local env files:
+- frontend: `client/.env.local`
+- backend: `server/.env`
 
-Your project is live at:
+#### Create the file `client/.env.local`
+Set the following variables:
+- **AUTH0_SECRET**: any long random string (you can generate one with `openssl rand -hex 32`)
+- **AUTH0_DOMAIN**: your Auth0 tenant domain as a URL from Auth0 Application settings, e.g. `http://<YOUR_AUTH0_DOMAIN>.us.auth0.com`
+- **AUTH0_CLIENT_ID**: *Client ID* from your Auth0 Application settings
+- **AUTH0_CLIENT_SECRET**: *Client Secret* from your Auth0 Application settings (keep it secret!)
+- **AUTH0_AUDIENCE**: *Identifier* from your Auth0 API settings
 
-**[https://vercel.com/eektheeeks-projects/v0-calendar-website](https://vercel.com/eektheeeks-projects/v0-calendar-website)**
+#### Create the file `server/.env`
+Set the following variables:
+- **AUTH0_DOMAIN**: the same value as in `client/.env.local`
+- **AUTH0_JWKS_PATH**: /.well-known/jwks.json
+- **AUTH0_AUDIENCE**: the same value as in `client/.env.local`
+- **AUTH0_ALGORITHM**: RS256
+- **AUTH0_CLIENT_ID**: the same value as in `client/.env.local`
+- **AUTH0_CLIENT_SECRET**: the same value as in `client/.env.local`
+- **AUTH0_SCOPE**: openid profile email
+- **AUTH0_REDIRECT_PATH**: /auth/login/callback
+- **AUTH0_TOKEN_PATH**: /oauth/token
+- **AUTH0_AUTHORIZE_PATH**: /authorize
+- **AUTH0_LOGOUT_PATH**: /v2/logout
 
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.app/chat/projects/nsDiEWjZAFe](https://v0.app/chat/projects/nsDiEWjZAFe)**
-
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+### Run application with Docker
+Execute the following commands from the project root directory:
+1. Build images: `docker compose build`
+2. Run migrate: `docker compose run --rm migrate`
+3. Start all services in the background: `docker compose up -d`
+4. Stop application: `docker compose down`
